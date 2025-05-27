@@ -201,16 +201,6 @@ export default function Welcome() {
                   />
                 </Stack>
               </Grid>
-              <Grid item xs={10} sm={5} order={{ xs: 12, sm: 12 }}>
-                <Stack
-                  direction="row"
-                  justifyContent="center"
-                  alignItems="center"
-                  sx={{ height: '100%', textAlign: 'center', mt: 1, pl: 2 }}
-                >
-                  Click for RASP Skew-T soundings
-                </Stack>
-              </Grid>
             </Grid>
 
             <Stack direction="row-reverse" sx={{ width: '100%', mt: bigScreen ? 2 : 1 }}>

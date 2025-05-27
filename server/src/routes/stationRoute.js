@@ -62,23 +62,7 @@ router.post('/', async (req, res) => {
     return;
   }
 
-  const {
-    name,
-    type,
-    coordinates,
-    externalLink,
-    externalId,
-    elevation,
-    validBearings,
-    harvestWindAverageId,
-    harvestWindGustId,
-    harvestWindDirectionId,
-    harvestTemperatureId,
-    gwWindAverageFieldName,
-    gwWindGustFieldName,
-    gwWindBearingFieldName,
-    gwTemperatureFieldName
-  } = req.body;
+  const { name, type, coordinates, externalLink, externalId, elevation, validBearings } = req.body;
 
   const station = new Station({
     name: name,
@@ -98,24 +82,6 @@ router.post('/', async (req, res) => {
 
   if (validBearings) {
     station.validBearings = validBearings;
-  }
-  if (harvestWindAverageId && harvestWindGustId && harvestWindDirectionId && harvestTemperatureId) {
-    station.harvestWindAverageId = harvestWindAverageId;
-    station.harvestWindGustId = harvestWindGustId;
-    station.harvestWindDirectionId = harvestWindDirectionId;
-    station.harvestTemperatureId = harvestTemperatureId;
-  }
-  if (gwWindAverageFieldName) {
-    station.gwWindAverageFieldName = gwWindAverageFieldName;
-  }
-  if (gwWindGustFieldName) {
-    station.gwWindGustFieldName = gwWindGustFieldName;
-  }
-  if (gwWindBearingFieldName) {
-    station.gwWindBearingFieldName = gwWindBearingFieldName;
-  }
-  if (gwTemperatureFieldName) {
-    station.gwTemperatureFieldName = gwTemperatureFieldName;
   }
 
   await station.save();

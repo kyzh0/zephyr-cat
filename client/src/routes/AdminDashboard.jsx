@@ -73,15 +73,6 @@ export default function AdminDashboard() {
             <Button
               variant="contained"
               onClick={() => {
-                navigate('../admin/add-sounding');
-              }}
-              sx={{ width: '180px', mb: 1 }}
-            >
-              Add New Sounding
-            </Button>
-            <Button
-              variant="contained"
-              onClick={() => {
                 navigate('../admin/errors');
               }}
               sx={{ width: '180px', mb: 1 }}

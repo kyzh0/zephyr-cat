@@ -48,16 +48,7 @@ const schema = mongoose.Schema({
       windBearing: Number,
       temperature: Number
     }
-  ],
-  harvestWindAverageId: String,
-  harvestWindGustId: String,
-  harvestWindDirectionId: String,
-  harvestTemperatureId: String,
-  harvestCookie: String,
-  gwWindAverageFieldName: String,
-  gwWindGustFieldName: String,
-  gwWindBearingFieldName: String,
-  gwTemperatureFieldName: String
+  ]
 });
 
 export const Station = mongoose.model('Station', schema);

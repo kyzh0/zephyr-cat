@@ -53,29 +53,6 @@ export default function AdminAddStation() {
       return;
     }
 
-    if (type === 'harvest') {
-      if (!externalLink.toUpperCase().includes('HARVEST')) {
-        setLoading(false);
-        setErrorMsg('URL is not a valid Harvest link');
-        setIsError(true);
-        return;
-      }
-    } else if (type === 'metservice') {
-      if (!externalLink.toUpperCase().includes('METSERVICE')) {
-        setLoading(false);
-        setErrorMsg('URL is not a valid Metservice link');
-        setIsError(true);
-        return;
-      }
-    } else if (type === 'holfuy') {
-      if (!externalLink.toUpperCase().includes('HOLFUY')) {
-        setLoading(false);
-        setErrorMsg('URL is not a valid Holfuy link');
-        setIsError(true);
-        return;
-      }
-    }
-
     const coords = coordinates.replace(' ', '').split(',');
     if (coords.length != 2) {
       setLoading(false);
@@ -119,72 +96,6 @@ export default function AdminAddStation() {
       return;
     }
 
-    let harvestConfigId = '';
-    let harvestWindAvgGraphId = '';
-    let harvestWindAvgTraceId = '';
-    let harvestWindGustGraphId = '';
-    let harvestWindGustTraceId = '';
-    let harvestWindDirGraphId = '';
-    let harvestWindDirTraceId = '';
-    let harvestTempGraphId = '';
-    let harvestTempTraceId = '';
-    if (type === 'harvest') {
-      harvestConfigId = data.get('harvestConfigId').trim();
-      harvestWindAvgGraphId = data.get('harvestWindAvgGraphId').trim();
-      harvestWindAvgTraceId = data.get('harvestWindAvgTraceId').trim();
-      harvestWindGustGraphId = data.get('harvestWindGustGraphId').trim();
-      harvestWindGustTraceId = data.get('harvestWindGustTraceId').trim();
-      harvestWindDirGraphId = data.get('harvestWindDirGraphId').trim();
-      harvestWindDirTraceId = data.get('harvestWindDirTraceId').trim();
-      harvestTempGraphId = data.get('harvestTempGraphId').trim();
-      harvestTempTraceId = data.get('harvestTempTraceId').trim();
-      if (
-        !harvestConfigId ||
-        !harvestWindAvgGraphId ||
-        !harvestWindAvgTraceId ||
-        !harvestWindGustGraphId ||
-        !harvestWindGustTraceId ||
-        !harvestWindDirGraphId ||
-        !harvestWindDirTraceId ||
-        !harvestTempGraphId ||
-        !harvestTempTraceId
-      ) {
-        setLoading(false);
-        setErrorMsg('Complete all Harvest fields');
-        setIsError(true);
-        return;
-      }
-      const regex1 = /^[0-9]+$/g;
-      if (
-        !externalId.match(regex1) ||
-        !harvestConfigId.match(regex1) ||
-        !harvestWindAvgGraphId.match(regex1) ||
-        !harvestWindAvgTraceId.match(regex1) ||
-        !harvestWindGustGraphId.match(regex1) ||
-        !harvestWindGustTraceId.match(regex1) ||
-        !harvestWindDirGraphId.match(regex1) ||
-        !harvestWindDirTraceId.match(regex1) ||
-        !harvestTempGraphId.match(regex1) ||
-        !harvestTempTraceId.match(regex1)
-      ) {
-        setLoading(false);
-        setErrorMsg('Invalid Harvest ID');
-        setIsError(true);
-        return;
-      }
-    }
-
-    let gwWindAvgFieldName = '';
-    let gwWindGustFieldName = '';
-    let gwWindBearingFieldName = '';
-    let gwTemperatureFieldName = '';
-    if (type === 'gw') {
-      gwWindAvgFieldName = data.get('gwWindAvgFieldName').trim();
-      gwWindGustFieldName = data.get('gwWindGustFieldName').trim();
-      gwWindBearingFieldName = data.get('gwWindBearingFieldName').trim();
-      gwTemperatureFieldName = data.get('gwTemperatureFieldName').trim();
-    }
-
     try {
       const station = {
         name: name,
@@ -201,19 +112,6 @@ export default function AdminAddStation() {
       }
       if (bearings) {
         station.validBearings = bearings;
-      }
-      if (type === 'harvest') {
-        station.externalId = `${externalId}_${harvestConfigId}`;
-        station.harvestWindAverageId = `${harvestWindAvgGraphId}_${harvestWindAvgTraceId}`;
-        station.harvestWindGustId = `${harvestWindGustGraphId}_${harvestWindGustTraceId}`;
-        station.harvestWindDirectionId = `${harvestWindDirGraphId}_${harvestWindDirTraceId}`;
-        station.harvestTemperatureId = `${harvestTempGraphId}_${harvestTempTraceId}`;
-      }
-      if (type === 'gw') {
-        station.gwWindAverageFieldName = gwWindAvgFieldName;
-        station.gwWindGustFieldName = gwWindGustFieldName;
-        station.gwWindBearingFieldName = gwWindBearingFieldName;
-        station.gwTemperatureFieldName = gwTemperatureFieldName;
       }
 
       await addStation(station, userKey);
@@ -254,35 +152,15 @@ export default function AdminAddStation() {
                 error={isError}
                 helperText={isError && errorMsg}
               />
-              {type === 'harvest' ? (
-                <>
-                  <TextField
-                    margin="dense"
-                    id="externalId"
-                    label="External ID"
-                    name="externalId"
-                    required
-                    sx={{ width: '49%' }}
-                  />
-                  <TextField
-                    margin="dense"
-                    id="harvestConfigId"
-                    label="Config ID"
-                    name="harvestConfigId"
-                    required
-                    sx={{ width: '49%', ml: '2%' }}
-                  />
-                </>
-              ) : (
-                <TextField
-                  margin="dense"
-                  fullWidth
-                  id="externalId"
-                  label="External ID"
-                  name="externalId"
-                  required
-                />
-              )}
+              <TextField
+                margin="dense"
+                fullWidth
+                id="externalId"
+                label="External ID"
+                name="externalId"
+                required
+              />
+
               <TextField
                 margin="dense"
                 fullWidth
@@ -303,16 +181,7 @@ export default function AdminAddStation() {
                   setType(e.target.value);
                 }}
               >
-                <MenuItem value="harvest">Harvest</MenuItem>
-                <MenuItem value="holfuy">Holfuy</MenuItem>
-                <MenuItem value="metservice">Metservice</MenuItem>
-                <MenuItem value="wu">Weather Underground</MenuItem>
-                <MenuItem value="tempest">Tempest</MenuItem>
                 <MenuItem value="attentis">Attentis</MenuItem>
-                <MenuItem value="wow">Met Office WOW</MenuItem>
-                <MenuItem value="windguru">Windguru</MenuItem>
-                <MenuItem value="wp">Weather Pro</MenuItem>
-                <MenuItem value="gw">Greater Wellington</MenuItem>
               </TextField>
               <TextField
                 margin="dense"
@@ -329,110 +198,6 @@ export default function AdminAddStation() {
                 label="Bearings CW 000-090,180-270"
                 name="bearings"
               />
-              {type === 'harvest' && (
-                <>
-                  <TextField
-                    margin="dense"
-                    id="harvestWindAvgGraphId"
-                    label="Wind Avg GraphID"
-                    name="harvestWindAvgGraphId"
-                    required
-                    sx={{ width: '49%' }}
-                  />
-                  <TextField
-                    margin="dense"
-                    id="harvestWindAvgTraceId"
-                    label="Trace ID"
-                    name="harvestWindAvgTraceId"
-                    required
-                    sx={{ width: '49%', ml: '2%' }}
-                  />
-                  <TextField
-                    margin="dense"
-                    id="harvestWindGustGraphId"
-                    label="Wind Gust GraphID"
-                    name="harvestWindGustGraphId"
-                    required
-                    sx={{ width: '49%' }}
-                  />
-                  <TextField
-                    margin="dense"
-                    id="harvestWindGustTraceId"
-                    label="Trace ID"
-                    name="harvestWindGustTraceId"
-                    required
-                    sx={{ width: '49%', ml: '2%' }}
-                  />
-                  <TextField
-                    margin="dense"
-                    id="harvestWindDirGraphId"
-                    label="Wind Dir GraphID"
-                    name="harvestWindDirGraphId"
-                    required
-                    sx={{ width: '49%' }}
-                  />
-                  <TextField
-                    margin="dense"
-                    id="harvestWindDirTraceId"
-                    label="Trace ID"
-                    name="harvestWindDirTraceId"
-                    required
-                    sx={{ width: '49%', ml: '2%' }}
-                  />
-                  <TextField
-                    margin="dense"
-                    id="harvestTempGraphId"
-                    label="Temp GraphID"
-                    name="harvestTempGraphId"
-                    required
-                    sx={{ width: '49%' }}
-                  />
-                  <TextField
-                    margin="dense"
-                    id="harvestTempTraceId"
-                    label="Trace ID"
-                    name="harvestTempTraceId"
-                    required
-                    sx={{ width: '49%', ml: '2%' }}
-                  />
-                </>
-              )}
-              {type === 'gw' && (
-                <>
-                  <TextField
-                    margin="dense"
-                    id="gwWindAvgFieldName"
-                    label="Wind Avg Field Name"
-                    name="gwWindAvgFieldName"
-                    required
-                    sx={{ width: '49%' }}
-                  />
-                  <TextField
-                    margin="dense"
-                    id="gwWindGustFieldName"
-                    label="Wind Gust Field Name"
-                    name="gwWindGustFieldName"
-                    required
-                    sx={{ width: '49%', ml: '2%' }}
-                  />
-                  <TextField
-                    margin="dense"
-                    id="gwWindBearingFieldName"
-                    label="Wind Bearing Field Name"
-                    name="gwWindBearingFieldName"
-                    required
-                    sx={{ width: '49%' }}
-                  />
-                  <TextField
-                    margin="dense"
-                    id="gwTemperatureFieldName"
-                    label="Temperature Field Name"
-                    name="gwTemperatureFieldName"
-                    required
-                    sx={{ width: '49%', ml: '2%' }}
-                  />
-                </>
-              )}
               <LoadingButton
                 loading={loading}
                 type="submit"

@@ -40,42 +40,8 @@ export function getWindDirectionFromBearing(bearing) {
 
 export function getStationTypeName(code) {
   switch (code) {
-    case 'wu':
-      return 'Weather Underground';
-    case 'wow':
-      return 'Met Office WOW';
-    case 'po':
-      return 'Port Otago';
-    case 'wp':
-      return 'Weather Pro';
-    case 'cp':
-      return 'CentrePort';
-    case 'sfo':
-      return 'Sofar Ocean';
-    case 'gw':
-      return 'Greater Wellington';
-    case 'cwu':
-      return 'Canterbury Weather Updates';
-    case 'mpyc':
-      return 'Mt Pleasant Yacht Club';
-    case 'lpc':
-      return 'Lyttelton Port Company';
-    case 'mrc':
-      return 'Mountain Research Centre';
-    case 'mfhb':
-      return "Model Flying Hawke's Bay";
-    case 'wainui':
-      return 'Wainuiomata';
-    case 'prime':
-      return 'Prime Port';
-    case 'wl':
-      return 'Weather Link';
-    case 'hw':
-      return 'Hutt Weather';
-    case 'pw':
-      return 'PredictWind';
-    case 'wi':
-      return 'Whanganui Inlet';
+    case 'ex':
+      return 'EXAMPLE';
     default:
       return code.charAt(0).toUpperCase() + code.slice(1);
   }
@@ -143,28 +109,8 @@ export function getWindColor(wind) {
 
 export function getWebcamTypeName(code) {
   switch (code) {
-    case 'lw':
-      return 'Lake Wanaka';
-    case 'qa':
-      return 'Queenstown Airport';
-    case 'wa':
-      return 'Wanaka Airport';
-    case 'cgc':
-      return 'Canterbury Gliding Club';
-    case 'ch':
-      return 'Castle Hill';
-    case 'cm':
-      return 'Mt Cheeseman';
-    case 'cwu':
-      return 'Canterbury Weather Updates';
-    case 'ap':
-      return 'Arthurs Pass';
-    case 'hutt':
-      return 'Mt Hutt';
-    case 'ts':
-      return 'Taylors Surf';
-    case 'camftp':
-      return 'Camera FTP';
+    case 'ex':
+      return 'EXAMPLE';
     default:
       return code.charAt(0).toUpperCase() + code.slice(1);
   }

@@ -7,14 +7,12 @@ import { getWindDirectionFromBearing } from '../helpers/utils';
 
 import { getStationById, listStations, listStationsUpdatedSince } from '../services/stationService';
 import { getCamById, listCams, listCamsUpdatedSince } from '../services/camService';
-import { listSoundings } from '../services/soundingService';
 
 import { createTheme, ThemeProvider } from '@mui/material';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import IconButton from '@mui/material/IconButton';
 import GridViewIcon from '@mui/icons-material/GridView';
-import SsidChartIcon from '@mui/icons-material/SsidChart';
 
 import MapTerrainControl from './MapTerrainControl';
 import MapUnitControl from './MapUnitControl';
@@ -45,10 +43,6 @@ export default function Map() {
   const [showWebcams, setShowWebcams] = useState(false);
   const webcamsHiddenRef = useRef(true);
 
-  const [soundingMarkers] = useState([]);
-  const [showSoundings, setShowSoundings] = useState(false);
-  const soundingsHiddenRef = useRef(true);
-
   const unitRef = useRef('kmh');
   const [posInit, setPosInit] = useState(false);
   const [lon, setLon] = useState(0);
@@ -67,17 +61,17 @@ export default function Map() {
     if (cookies.lon) {
       if (!isNaN(cookies.lon) && cookies.lon >= -180 && cookies.lon <= 180) setLon(cookies.lon);
     } else {
-      setCookies('lon', 172.5, cookiesOptions);
+      setCookies('lon', 1.81, cookiesOptions);
     }
     if (cookies.lat) {
       if (!isNaN(cookies.lat) && cookies.lat >= -90 && cookies.lat <= 90) setLat(cookies.lat);
     } else {
-      setCookies('lat', -41, cookiesOptions);
+      setCookies('lat', 42.09, cookiesOptions);
     }
     if (cookies.zoom) {
       if (!isNaN(cookies.zoom)) setZoom(cookies.zoom);
     } else {
-      setCookies('zoom', window.innerWidth > 1000 ? 5.1 : 4.3, cookiesOptions);
+      setCookies('zoom', window.innerWidth > 1000 ? 8 : 7, cookiesOptions);
     }
 
     if (!cookies.visited) {
@@ -214,46 +208,6 @@ export default function Map() {
           currentUrl: cam.currentUrl
         },
         geometry: cam.location
-      };
-      geoJson.features.push(feature);
-    }
-    return geoJson;
-  }
-
-  function getSoundingGeoJson(soundings) {
-    if (!soundings || !soundings.length) return null;
-
-    const geoJson = {
-      type: 'FeatureCollection',
-      features: []
-    };
-    for (const s of soundings) {
-      s.images.sort((a, b) => {
-        return new Date(a.time).getTime() - new Date(b.time).getTime();
-      });
-      const afterDates = s.images.filter((img) => {
-        return (
-          // nearest image
-          new Date(img.time).getTime() - (Date.now() - 30 * 60 * 1000) > 0
-        );
-      });
-
-      let url = '';
-      let time = null;
-      if (afterDates && afterDates.length) {
-        url = afterDates[0].url;
-        time = afterDates[0].time;
-      }
-
-      const feature = {
-        type: 'Feature',
-        properties: {
-          name: s.name,
-          dbId: s._id,
-          currentTime: time,
-          currentUrl: url
-        },
-        geometry: s.location
       };
       geoJson.features.push(feature);
     }
@@ -428,57 +382,6 @@ export default function Map() {
       new mapboxgl.Marker(el).setLngLat(f.geometry.coordinates).addTo(map.current);
     }
   }
-
-  const lastSoundingRefreshRef = useRef(0);
-  async function initialiseSoundings() {
-    const geoJson = getSoundingGeoJson(await listSoundings());
-    if (!map.current || !geoJson || !geoJson.features.length) return;
-
-    const timestamp = Date.now();
-    lastSoundingRefreshRef.current = timestamp;
-
-    for (const f of geoJson.features) {
-      const name = f.properties.name;
-      const dbId = f.properties.dbId;
-      const currentTime = f.properties.currentTime;
-      const currentUrl = f.properties.currentUrl;
-
-      const img = document.createElement('img');
-      img.width = 150;
-      img.className = 'webcam-img';
-
-      const text = document.createElement('span');
-      text.className = 'webcam-text-name';
-      text.innerHTML = `${name}`;
-
-      const text1 = document.createElement('span');
-      text1.className = 'webcam-text-date';
-
-      if (currentUrl && currentTime) {
-        img.src = `${FILESERVERROOT}/${currentUrl}`;
-        text1.innerHTML = formatInTimeZone(currentTime, 'Pacific/Auckland', 'dd MMM HH:mm');
-      } else {
-        text1.innerHTML = 'Click to view more...';
-      }
-
-      const el = document.createElement('div');
-      el.style.backgroundColor = `white`;
-      el.style.visibility = 'hidden';
-      el.id = dbId;
-      el.className = 'webcam';
-      el.dataset.timestamp = timestamp;
-      el.addEventListener('click', () => {
-        navigate(`/soundings/${dbId}`);
-      });
-      el.appendChild(text);
-      el.appendChild(img);
-      el.appendChild(text1);
-
-      soundingMarkers.push(el);
-      new mapboxgl.Marker(el).setLngLat(f.geometry.coordinates).addTo(map.current);
-    }
-  }
-
   async function refreshStations() {
     if (document.visibilityState !== 'visible') return;
     if (!stationMarkers.length) return;
@@ -680,58 +583,6 @@ export default function Map() {
     setRefreshedWebcams(updatedIds);
   }
 
-  async function refreshSoundings() {
-    if (document.visibilityState !== 'visible') return;
-    if (soundingsHiddenRef.current) return;
-    if (!soundingMarkers.length) return;
-
-    let timestamp = Date.now();
-    if (timestamp - lastSoundingRefreshRef.current < REFRESH_INTERVAL_SECONDS * 1000) return; // enforce refresh interval
-
-    // check if not refreshed in 1h, or passing 30 min mark
-    let nowMins = new Date().getUTCMinutes();
-    let lastMins = new Date(lastSoundingRefreshRef.current).getUTCMinutes();
-    if (lastMins > 30) {
-      if (nowMins > lastMins) nowMins -= 30;
-      lastMins -= 30;
-    }
-    if (
-      timestamp - lastSoundingRefreshRef.current < 60 * 60 * 1000 &&
-      !(lastMins < 30 && nowMins >= 30)
-    )
-      return;
-
-    lastSoundingRefreshRef.current = timestamp;
-
-    // update marker styling
-    const geoJson = getSoundingGeoJson(await listSoundings());
-    if (!geoJson || !geoJson.features.length) return;
-
-    for (const item of soundingMarkers) {
-      const matches = geoJson.features.filter((f) => {
-        return f.properties.dbId === item.id;
-      });
-      if (!matches || !matches.length) continue;
-
-      const f = matches[0];
-      const currentTime = f.properties.currentTime;
-      const currentUrl = f.properties.currentUrl;
-
-      item.dataset.timestamp = timestamp;
-      for (const child of item.children) {
-        if (child.className === 'webcam-img') {
-          child.src = currentUrl ? `${FILESERVERROOT}/${currentUrl}` : '';
-        } else if (child.className === 'webcam-text-date') {
-          if (currentTime) {
-            child.innerHTML = formatInTimeZone(currentTime, 'Pacific/Auckland', 'dd MMM HH:mm');
-          } else {
-            child.innerHTML = 'Click to view more...';
-          }
-        }
-      }
-    }
-  }
-
   // change unit
   useEffect(() => {
     unitRef.current = cookies.unit === 'kt' ? 'kt' : 'kmh';
@@ -810,7 +661,6 @@ export default function Map() {
     map.current.on('load', async () => {
       await initialiseStations();
       await initialiseWebcams();
-      await initialiseSoundings();
 
       // poll for new data
       const interval = setInterval(
@@ -818,7 +668,6 @@ export default function Map() {
           try {
             await refreshStations();
             await refreshWebcams();
-            await refreshSoundings();
           } catch {
             if (interval) {
               clearInterval(interval);
@@ -853,19 +702,16 @@ export default function Map() {
     document.addEventListener('visibilitychange', () => {
       refreshStations();
       refreshWebcams();
-      refreshSoundings();
     });
     return () => {
       document.removeEventListener('visibilitychange', () => {
         refreshStations();
         refreshWebcams();
-        refreshSoundings();
       });
     };
   }, []);
 
   function handleWebcamClick() {
-    if (showSoundings) handleSoundingClick();
     for (const marker of webcamMarkers) {
       marker.style.visibility = showWebcams ? 'hidden' : 'visible';
     }
@@ -874,18 +720,6 @@ export default function Map() {
       refreshWebcams();
     }
     setShowWebcams(!showWebcams);
-  }
-
-  function handleSoundingClick() {
-    if (showWebcams) handleWebcamClick();
-    for (const marker of soundingMarkers) {
-      marker.style.visibility = showSoundings ? 'hidden' : 'visible';
-    }
-    soundingsHiddenRef.current = showSoundings;
-    if (!showSoundings) {
-      refreshSoundings();
-    }
-    setShowSoundings(!showSoundings);
   }
 
   return (
@@ -949,17 +783,10 @@ export default function Map() {
             }
           }}
           onClick={() => {
-            navigate('/donate');
+            navigate('/grid');
           }}
         >
-          <img
-            src="/donate.png"
-            style={{
-              width: '18px',
-              height: '18px',
-              opacity: 0.7
-            }}
-          />
+          <GridViewIcon sx={{ width: '26px', height: '16px', opacity: 0.7 }} />
         </IconButton>
         <IconButton
           color="primary"
@@ -979,30 +806,6 @@ export default function Map() {
               backgroundColor: '#f2f2f2'
             }
           }}
-          onClick={() => {
-            navigate('/grid');
-          }}
-        >
-          <GridViewIcon sx={{ width: '26px', height: '16px', opacity: 0.7 }} />
-        </IconButton>
-        <IconButton
-          color="primary"
-          sx={{
-            backgroundColor: 'white',
-            color: '#333333',
-            borderRadius: '4px',
-            boxShadow: '0 0 0 2px rgba(0,0,0,.1)',
-            position: 'absolute',
-            top: 0,
-            left: 105,
-            m: '10px',
-            width: '29px',
-            height: '29px',
-            zIndex: 5,
-            '&:hover': {
-              backgroundColor: '#f2f2f2'
-            }
-          }}
           onClick={handleWebcamClick}
         >
           <img
@@ -1011,35 +814,6 @@ export default function Map() {
               width: '26px',
               height: '16px',
               opacity: showWebcams ? 1 : 0.5
-            }}
-          />
-        </IconButton>
-        <IconButton
-          color="primary"
-          sx={{
-            backgroundColor: 'white',
-            color: '#333333',
-            borderRadius: '4px',
-            boxShadow: '0 0 0 2px rgba(0,0,0,.1)',
-            position: 'absolute',
-            top: 0,
-            left: 140,
-            m: '10px',
-            width: '29px',
-            height: '29px',
-            zIndex: 5,
-            '&:hover': {
-              backgroundColor: '#f2f2f2'
-            }
-          }}
-          onClick={handleSoundingClick}
-        >
-          <SsidChartIcon
-            sx={{
-              width: '28px',
-              height: '18px',
-              opacity: showSoundings ? 1 : 0.7,
-              transform: 'rotate(270deg)'
             }}
           />
         </IconButton>
