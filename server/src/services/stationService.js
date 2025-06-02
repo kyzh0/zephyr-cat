@@ -60,38 +60,38 @@ function getWindBearingFromDirection(direction) {
   }
 }
 
-async function getAttentisData(stationId) {
-  let windAverage = null;
-  let windGust = null;
-  let windBearing = null;
-  let temperature = null;
+async function getKrasonData() {
+  const result = new Map();
 
   try {
-    const { data } = await axios.get('https://api.attentistechnology.com/sensor-overview', {
-      headers: { Authorization: `Bearer ${process.env.ATTENTIS_KEY}`, Connection: 'keep-alive' }
-    });
-    if (data.data && data.data.weather_readings) {
-      const d = data.data.weather_readings[stationId];
-      if (d) {
-        windAverage = d.wind_speed;
-        windGust = d.wind_gust_speed;
-        windBearing = d.wind_direction;
-        temperature = d.air_temp;
+    const { data } = await axios.get(
+      `https://zephyr-data-provider.fermyon.app/api/v1/measurements?token=${process.env.KRASON_TOKEN}`
+    );
+    if (data && data.length) {
+      for (const d of data) {
+        if (d) {
+          // const lastUpdate = new Date(d.last_update_utc.split(' ').join('T') + ':00.000Z');
+          const lastUpdate = new Date();
+          // only update if data < 20 mins old
+          if (Date.now() - lastUpdate.getTime() < 60 * 60 * 1000) {
+            result.set(d.station_id, {
+              windAverage: d.wind_speed,
+              windGust: d.gusts_speed,
+              windBearing: d.wind_direction,
+              temperature: d.temperature
+            });
+          }
+        }
       }
     }
   } catch (error) {
-    logger.warn(`An error occured while fetching data for attentis - ${stationId}`, {
+    logger.warn('An error occured while fetching data for krason', {
       service: 'station',
-      type: 'attentis'
+      type: 'krason'
     });
   }
 
-  return {
-    windAverage,
-    windGust,
-    windBearing,
-    temperature
-  };
+  return result;
 }
 
 async function saveData(station, data, date) {
@@ -155,21 +155,23 @@ export async function stationWrapper() {
       return null;
     }
 
+    const krasonData = await getKrasonData();
+
     const date = getFlooredTime();
     for (const s of stations) {
       let data = null;
-      if (s.type === 'attentis') {
-        data = await getAttentisData(s.externalId);
+      if (s.type === 'krason') {
+        data = krasonData.get(s.externalId);
       }
-    }
 
-    if (data) {
-      logger.info(`${s.type} data updated${s.externalId ? ` - ${s.externalId}` : ''}`, {
-        service: 'station',
-        type: s.type
-      });
-      logger.info(JSON.stringify(data), { service: 'station', type: s.type });
-      await saveData(s, data, date);
+      if (data) {
+        logger.info(`${s.type} data updated${s.externalId ? ` - ${s.externalId}` : ''}`, {
+          service: 'station',
+          type: s.type
+        });
+        logger.info(JSON.stringify(data), { service: 'station', type: s.type });
+        await saveData(s, data, date);
+      }
     }
   } catch (error) {
     logger.error(`An error occurred while fetching station data`, {

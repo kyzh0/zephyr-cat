@@ -40,7 +40,7 @@ export default function Map() {
   const [stationMarkers] = useState([]);
 
   const [webcamMarkers] = useState([]);
-  const [showWebcams, setShowWebcams] = useState(false);
+  // const [showWebcams, setShowWebcams] = useState(false);
   const webcamsHiddenRef = useRef(true);
 
   const unitRef = useRef('kmh');
@@ -711,16 +711,16 @@ export default function Map() {
     };
   }, []);
 
-  function handleWebcamClick() {
-    for (const marker of webcamMarkers) {
-      marker.style.visibility = showWebcams ? 'hidden' : 'visible';
-    }
-    webcamsHiddenRef.current = showWebcams;
-    if (!showWebcams) {
-      refreshWebcams();
-    }
-    setShowWebcams(!showWebcams);
-  }
+  // function handleWebcamClick() {
+  //   for (const marker of webcamMarkers) {
+  //     marker.style.visibility = showWebcams ? 'hidden' : 'visible';
+  //   }
+  //   webcamsHiddenRef.current = showWebcams;
+  //   if (!showWebcams) {
+  //     refreshWebcams();
+  //   }
+  //   setShowWebcams(!showWebcams);
+  // }
 
   return (
     <ThemeProvider theme={theme}>
@@ -788,7 +788,7 @@ export default function Map() {
         >
           <GridViewIcon sx={{ width: '26px', height: '16px', opacity: 0.7 }} />
         </IconButton>
-        <IconButton
+        {/* <IconButton
           color="primary"
           sx={{
             backgroundColor: 'white',
@@ -816,7 +816,7 @@ export default function Map() {
               opacity: showWebcams ? 1 : 0.5
             }}
           />
-        </IconButton>
+        </IconButton> */}
         <Box
           ref={mapContainer}
           sx={{
