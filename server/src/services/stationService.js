@@ -1,9 +1,4 @@
 import axios from 'axios';
-import { parse } from 'date-fns';
-import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
-import fs from 'fs/promises';
-import sharp from 'sharp';
-import { createWorker } from 'tesseract.js';
 
 import logger from '../helpers/log.js';
 

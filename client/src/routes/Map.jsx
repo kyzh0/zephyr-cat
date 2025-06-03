@@ -357,7 +357,7 @@ export default function Map() {
 
       const text1 = document.createElement('span');
       text1.className = 'webcam-text-date';
-      text1.innerHTML = formatInTimeZone(currentTime, 'Pacific/Auckland', 'dd MMM HH:mm');
+      text1.innerHTML = formatInTimeZone(currentTime, 'CET', 'dd MMM HH:mm');
 
       const el = document.createElement('div');
       el.style.backgroundColor = `white`;
@@ -571,7 +571,7 @@ export default function Map() {
             child.innerHTML = 'No images in the last 24h.';
             child.style.color = 'red';
           } else {
-            child.innerHTML = formatInTimeZone(currentTime, 'Pacific/Auckland', 'dd MMM HH:mm');
+            child.innerHTML = formatInTimeZone(currentTime, 'CET', 'dd MMM HH:mm');
             child.style.color = '';
           }
         }

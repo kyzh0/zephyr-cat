@@ -22,10 +22,7 @@ async function getLakeWanakaImage(id, lastUpdate) {
     });
     const d = data.latest_image;
     if (d && d.timestamp) {
-      updated = fromZonedTime(
-        parse(d.timestamp, 'yyyy-MM-dd HH:mm:ss', new Date()),
-        'Pacific/Auckland'
-      );
+      updated = fromZonedTime(parse(d.timestamp, 'yyyy-MM-dd HH:mm:ss', new Date()), 'CET');
       // skip if image already up to date
       if (updated > lastUpdate && d.url) {
         const response = await axios.get(d.url, {
@@ -93,7 +90,7 @@ async function getWanakaAirportImage(id) {
       hour: 'numeric',
       minute: 'numeric',
       hour12: false,
-      timeZone: 'Pacific/Auckland'
+      timeZone: 'CET'
     });
     const parts = dateTimeFormat.formatToParts(new Date());
 

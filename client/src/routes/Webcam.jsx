@@ -141,11 +141,7 @@ export default function Webcam() {
                           <div key={img.time}>
                             <img width="100%" src={`${FILESERVERROOT}/${img.url}`} />
                             <p style={{ margin: 0 }}>
-                              {formatInTimeZone(
-                                new Date(img.time),
-                                'Pacific/Auckland',
-                                'dd MMM HH:mm'
-                              )}
+                              {formatInTimeZone(new Date(img.time), 'CET', 'dd MMM HH:mm')}
                             </p>
                           </div>
                         );

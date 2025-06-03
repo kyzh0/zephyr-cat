@@ -181,7 +181,7 @@ export default function AdminAddStation() {
                   setType(e.target.value);
                 }}
               >
-                <MenuItem value="attentis">Attentis</MenuItem>
+                <MenuItem value="krason">Krason</MenuItem>
               </TextField>
               <TextField
                 margin="dense"
