@@ -281,15 +281,15 @@ export async function checkForErrors() {
         }
       }
       if (msg.length) {
-        await axios.post(`https://api.emailjs.com/api/v1.0/email/send`, {
-          service_id: process.env.EMAILJS_SERVICE_ID,
-          template_id: process.env.EMAILJS_TEMPLATE_ID,
-          user_id: process.env.EMAILJS_PUBLIC_KEY,
-          template_params: {
-            message: `Scheduled check ran successfully at ${new Date().toISOString()}\n${msg}`
-          },
-          accessToken: process.env.EMAILJS_PRIVATE_KEY
-        });
+        // await axios.post(`https://api.emailjs.com/api/v1.0/email/send`, {
+        //   service_id: process.env.EMAILJS_SERVICE_ID,
+        //   template_id: process.env.EMAILJS_TEMPLATE_ID,
+        //   user_id: process.env.EMAILJS_PUBLIC_KEY,
+        //   template_params: {
+        //     message: `Scheduled check ran successfully at ${new Date().toISOString()}\n${msg}`
+        //   },
+        //   accessToken: process.env.EMAILJS_PRIVATE_KEY
+        // });
       }
     }
 
