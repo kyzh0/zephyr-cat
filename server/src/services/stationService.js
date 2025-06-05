@@ -65,10 +65,9 @@ async function getKrasonData() {
     if (data && data.length) {
       for (const d of data) {
         if (d) {
-          // const lastUpdate = new Date(d.last_update_utc.split(' ').join('T') + ':00.000Z');
-          const lastUpdate = new Date();
+          const lastUpdate = new Date(d.last_update);
           // only update if data < 20 mins old
-          if (Date.now() - lastUpdate.getTime() < 60 * 60 * 1000) {
+          if (Date.now() - lastUpdate.getTime() < 20 * 60 * 1000) {
             result.set(d.station_id, {
               windAverage: d.wind_speed,
               windGust: d.gusts_speed,
