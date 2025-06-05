@@ -64,18 +64,25 @@ async function getKrasonData() {
     );
     if (data && data.length) {
       for (const d of data) {
+        let item = {
+          windAverage: null,
+          windGust: null,
+          windBearing: null,
+          temperature: null
+        };
         if (d) {
           const lastUpdate = new Date(d.last_update);
-          // only update if data < 20 mins old
-          if (Date.now() - lastUpdate.getTime() < 20 * 60 * 1000) {
-            result.set(d.station_id, {
+          // only update if data < 40 mins old
+          if (Date.now() - lastUpdate.getTime() < 40 * 60 * 1000) {
+            item = {
               windAverage: d.wind_speed,
               windGust: d.gusts_speed,
               windBearing: d.wind_direction,
               temperature: d.temperature
-            });
+            };
           }
         }
+        result.set(d.station_id, item);
       }
     }
   } catch (error) {
