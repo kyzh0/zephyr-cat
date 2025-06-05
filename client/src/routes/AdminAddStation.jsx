@@ -182,6 +182,8 @@ export default function AdminAddStation() {
                 }}
               >
                 <MenuItem value="krason">Krason</MenuItem>
+                <MenuItem value="weatherlink">WeatherLink</MenuItem>
+                <MenuItem value="meteocat">meteo.cat</MenuItem>
               </TextField>
               <TextField
                 margin="dense"

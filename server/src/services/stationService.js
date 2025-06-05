@@ -95,6 +95,42 @@ async function getKrasonData() {
   return result;
 }
 
+async function getWeatherLinkData(stationId) {
+  let windAverage = null;
+  let windGust = null;
+  let windBearing = null;
+  let temperature = null;
+
+  try {
+    const { data } = await axios.get(
+      `https://www.weatherlink.com/embeddablePage/getData/${stationId}`,
+      {
+        headers: {
+          Connection: 'keep-alive'
+        }
+      }
+    );
+
+    if (data) {
+      windAverage = data.wind;
+      windBearing = data.windDirection;
+      temperature = data.temperature;
+    }
+  } catch (error) {
+    logger.warn(`An error occured while fetching data for weatherlink - ${stationId}`, {
+      service: 'station',
+      type: 'other'
+    });
+  }
+
+  return {
+    windAverage,
+    windGust,
+    windBearing,
+    temperature
+  };
+}
+
 async function saveData(station, data, date) {
   // handle likely erroneous values
   let avg = data.windAverage;
@@ -163,6 +199,8 @@ export async function stationWrapper() {
       let data = null;
       if (s.type === 'krason') {
         data = krasonData.get(s.externalId);
+      } else if (s.type === 'weatherlink') {
+        data = await getWeatherLinkData(s.externalId);
       }
 
       if (data) {
