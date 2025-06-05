@@ -40,8 +40,12 @@ export function getWindDirectionFromBearing(bearing) {
 
 export function getStationTypeName(code) {
   switch (code) {
-    case 'ex':
-      return 'EXAMPLE';
+    case 'krason':
+      return '';
+    case 'weatherlink':
+      return 'WeatherLink';
+    case 'meteocat':
+      return 'meteo.cat';
     default:
       return code.charAt(0).toUpperCase() + code.slice(1);
   }

@@ -15,45 +15,45 @@ function getFlooredTime() {
   return date;
 }
 
-function getWindBearingFromDirection(direction) {
-  if (!direction) return 0;
-  switch (direction.trim().toUpperCase()) {
-    case 'N':
-      return 0;
-    case 'NNE':
-      return 22.5;
-    case 'NE':
-      return 45;
-    case 'ENE':
-      return 67.5;
-    case 'E':
-      return 90;
-    case 'ESE':
-      return 112.5;
-    case 'SE':
-      return 135;
-    case 'SSE':
-      return 157.5;
-    case 'S':
-      return 180;
-    case 'SSW':
-      return 202.5;
-    case 'SW':
-      return 225;
-    case 'WSW':
-      return 247.5;
-    case 'W':
-      return 270;
-    case 'WNW':
-      return 292.5;
-    case 'NW':
-      return 325;
-    case 'NNW':
-      return 337.5;
-    default:
-      return 0;
-  }
-}
+// function getWindBearingFromDirection(direction) {
+//   if (!direction) return 0;
+//   switch (direction.trim().toUpperCase()) {
+//     case 'N':
+//       return 0;
+//     case 'NNE':
+//       return 22.5;
+//     case 'NE':
+//       return 45;
+//     case 'ENE':
+//       return 67.5;
+//     case 'E':
+//       return 90;
+//     case 'ESE':
+//       return 112.5;
+//     case 'SE':
+//       return 135;
+//     case 'SSE':
+//       return 157.5;
+//     case 'S':
+//       return 180;
+//     case 'SSW':
+//       return 202.5;
+//     case 'SW':
+//       return 225;
+//     case 'WSW':
+//       return 247.5;
+//     case 'W':
+//       return 270;
+//     case 'WNW':
+//       return 292.5;
+//     case 'NW':
+//       return 325;
+//     case 'NNW':
+//       return 337.5;
+//     default:
+//       return 0;
+//   }
+// }
 
 async function getKrasonData() {
   const result = new Map();
@@ -95,9 +95,91 @@ async function getKrasonData() {
   return result;
 }
 
-async function getWeatherLinkData(stationId) {
+async function getMeteoCatData(stationId) {
   let windAverage = null;
   let windGust = null;
+  let windBearing = null;
+  let temperature = null;
+
+  try {
+    const { data } = await axios.get(
+      `https://www.meteo.cat/observacions/xema/dades?codi=${stationId}`,
+      {
+        headers: {
+          Connection: 'keep-alive'
+        }
+      }
+    );
+    if (data.length) {
+      let dataAgeMinutes = 0;
+
+      const startStr = '<th scope="row">';
+      let i = data.lastIndexOf(startStr);
+      if (i >= 0) {
+        let j = data.indexOf('</th>', i + 16);
+        if (j > i) {
+          const latestTime = data.slice(i, j).replace(startStr, '').replace(/\s/g, '').slice(-5);
+          const latestHour = Number(latestTime.slice(0, 2));
+          const latestMinute = Number(latestTime.slice(-2));
+          let currentHour = new Date().getUTCHours();
+          const currentMinute = new Date().getUTCMinutes();
+          // if current is next day
+          if (latestHour > currentHour) {
+            currentHour += 24;
+          }
+          const hourDiff = currentHour - latestHour;
+          const minuteDiff =
+            latestHour === currentHour
+              ? currentMinute - latestMinute
+              : 60 - latestMinute + currentMinute;
+          dataAgeMinutes = hourDiff * 60 + minuteDiff;
+        }
+
+        if (dataAgeMinutes <= 40) {
+          j = data.indexOf('</tr>', i + 16);
+          if (j > i) {
+            const lastRowData = data
+              .slice(i, j)
+              .replaceAll('<td class="trans">', '<td>')
+              .replaceAll('<em>', '')
+              .replaceAll('</em>', '');
+            i = lastRowData.indexOf('<td>');
+            if (i >= 0) {
+              j = lastRowData.lastIndexOf('</td>');
+              if (j > i) {
+                const cellData = lastRowData.slice(i, j);
+                const values = cellData.replaceAll('<td>', '').replace(/\s/g, '').split('</td>');
+
+                if (values.length === 10) {
+                  if (values[6] !== '(s/d)') windAverage = Number(values[6]);
+                  if (values[8] !== '(s/d)') windGust = Number(values[8]);
+                  if (values[7] !== '(s/d)') windBearing = Number(values[7]);
+                  if (values[0] !== '(s/d)') temperature = Number(values[0]);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    logger.warn(`An error occured while fetching data for meteocat - ${stationId}`, {
+      service: 'station',
+      type: 'other'
+    });
+  }
+
+  return {
+    windAverage,
+    windGust,
+    windBearing,
+    temperature
+  };
+}
+
+async function getWeatherLinkData(stationId) {
+  let windAverage = null;
+  const windGust = null;
   let windBearing = null;
   let temperature = null;
 
@@ -199,6 +281,8 @@ export async function stationWrapper() {
       let data = null;
       if (s.type === 'krason') {
         data = krasonData.get(s.externalId);
+      } else if (s.type === 'meteocat') {
+        data = await getMeteoCatData(s.externalId);
       } else if (s.type === 'weatherlink') {
         data = await getWeatherLinkData(s.externalId);
       }

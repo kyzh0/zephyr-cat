@@ -4,7 +4,7 @@ import { useCookies } from 'react-cookie';
 import { formatInTimeZone } from 'date-fns-tz';
 import { getStationById, loadStationData } from '../services/stationService';
 import { AppContext } from '../context/AppContext';
-import { getWindDirectionFromBearing, getWindColor } from '../helpers/utils';
+import { getWindDirectionFromBearing, getWindColor, getStationTypeName } from '../helpers/utils';
 
 import {
   LineChart,
@@ -753,7 +753,7 @@ export default function Station() {
                   rel="noreferrer"
                   variant="subtitle2"
                 >
-                  Source
+                  Source: {getStationTypeName(station.type)}
                 </Link>
               )}
             </Stack>
