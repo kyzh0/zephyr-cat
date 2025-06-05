@@ -139,7 +139,7 @@ export default function Welcome() {
                   direction may be favourable
                 </Stack>
               </Grid>
-              <Grid item xs={2} sm={1} order={{ xs: 7, sm: 3 }}>
+              {/* <Grid item xs={2} sm={1} order={{ xs: 7, sm: 3 }}>
                 <Stack
                   direction="row"
                   justifyContent="end"
@@ -151,8 +151,8 @@ export default function Welcome() {
                     style={{ width: `${scaling * 32}px`, height: `${scaling * 20}px` }}
                   />
                 </Stack>
-              </Grid>
-              <Grid item xs={10} sm={5} order={{ xs: 8, sm: 4 }}>
+              </Grid> */}
+              {/* <Grid item xs={10} sm={5} order={{ xs: 8, sm: 4 }}>
                 <Stack
                   direction="row"
                   justifyContent="center"
@@ -161,7 +161,7 @@ export default function Welcome() {
                 >
                   Click this icon to view webcams
                 </Stack>
-              </Grid>
+              </Grid> */}
               <Grid item xs={2} sm={1} order={{ xs: 9, sm: 7 }}>
                 <Stack
                   direction="row"
