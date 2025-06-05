@@ -120,8 +120,12 @@ export default function Help() {
                 <Typography component="h1" variant="h5">
                   Contact
                 </Typography>
-                <Typography variant="subtitle2">
+                <Typography variant="subtitle2" gutterBottom>
                   Got feedback, or want a weather station added?
+                </Typography>
+                <Typography variant="subtitle2" sx={{ fontSize: 10, textAlign: 'center' }}>
+                  This app is a &quot;thank you&quot; from Kyle and Greg for the hospitality of the
+                  Catalan free-flying community.
                 </Typography>
                 <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
                   <TextField
