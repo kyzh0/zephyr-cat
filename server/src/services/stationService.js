@@ -149,10 +149,41 @@ async function getMeteoCatData(stationId) {
     if (data.length) {
       let dataAgeMinutes = 0;
 
-      const startStr = '<th scope="row">';
-      let i = data.lastIndexOf(startStr);
+      // find col indices
+      let avgIdx = -1;
+      let gustIdx = -1;
+      let dirIdx = -1;
+      let tempIdx = -1;
+
+      let startStr = '<caption>Dades de per&iacute;ode</caption>';
+      let i = data.indexOf(startStr);
+      if (i > 0) {
+        const j = data.indexOf('</tr>', i + startStr.length);
+        if (j > i) {
+          const headerText = data
+            .slice(i + startStr.length, j)
+            .replace('<tr>', '')
+            .trim();
+          const headers = headerText.split('</th>');
+          for (let i = 1; i < headers.length; i++) {
+            const val = headers[i]; // skip 1st utc header
+            if (val.includes('Temperatura mitjana (&deg;C)')) {
+              tempIdx = i - 1;
+            } else if (val.includes('Velocitat mitjana del vent (km/h)')) {
+              avgIdx = i - 1;
+            } else if (val.includes('Direcci&oacute; mitjana del vent (graus)')) {
+              dirIdx = i - 1;
+            } else if (val.includes('Ratxa m&agrave;xima del vent (km/h)')) {
+              gustIdx = i - 1;
+            }
+          }
+        }
+      }
+
+      startStr = '<th scope="row">';
+      i = data.lastIndexOf(startStr);
       if (i >= 0) {
-        let j = data.indexOf('</th>', i + 16);
+        let j = data.indexOf('</th>', i + startStr.length);
         if (j > i) {
           const latestTime = data.slice(i, j).replace(startStr, '').replace(/\s/g, '').slice(-5);
           const latestHour = Number(latestTime.slice(0, 2));
@@ -172,7 +203,7 @@ async function getMeteoCatData(stationId) {
         }
 
         if (dataAgeMinutes <= 40) {
-          j = data.indexOf('</tr>', i + 16);
+          j = data.indexOf('</tr>', i + startStr.length);
           if (j > i) {
             const lastRowData = data
               .slice(i, j)
@@ -186,17 +217,11 @@ async function getMeteoCatData(stationId) {
                 const cellData = lastRowData.slice(i, j);
                 const values = cellData.replaceAll('<td>', '').replace(/\s/g, '').split('</td>');
 
-                if (values.length === 9) {
-                  if (values[5] !== '(s/d)') windAverage = Number(values[5]);
-                  if (values[7] !== '(s/d)') windGust = Number(values[7]);
-                  if (values[6] !== '(s/d)') windBearing = Number(values[6]);
-                  if (values[0] !== '(s/d)') temperature = Number(values[0]);
-                } else if (values.length === 10) {
-                  if (values[6] !== '(s/d)') windAverage = Number(values[6]);
-                  if (values[8] !== '(s/d)') windGust = Number(values[8]);
-                  if (values[7] !== '(s/d)') windBearing = Number(values[7]);
-                  if (values[0] !== '(s/d)') temperature = Number(values[0]);
-                }
+                if (avgIdx > -1 && values[avgIdx] !== '(s/d)') windAverage = Number(values[avgIdx]);
+                if (gustIdx > -1 && values[gustIdx] !== '(s/d)') windGust = Number(values[gustIdx]);
+                if (dirIdx > -1 && values[dirIdx] !== '(s/d)') windBearing = Number(values[dirIdx]);
+                if (tempIdx > -1 && values[tempIdx] !== '(s/d)')
+                  temperature = Number(values[tempIdx]);
               }
             }
           }
