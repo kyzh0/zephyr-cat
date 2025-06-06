@@ -47,7 +47,7 @@ export function getStationTypeName(code) {
     case 'meteocat':
       return 'meteo.cat';
     default:
-      return code.charAt(0).toUpperCase() + code.slice(1);
+      return code;
   }
 }
 

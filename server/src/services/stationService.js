@@ -1,4 +1,7 @@
 import axios from 'axios';
+import { parse } from 'date-fns';
+import { fromZonedTime } from 'date-fns-tz';
+import iconv from 'iconv-lite';
 
 import logger from '../helpers/log.js';
 
@@ -15,84 +18,117 @@ function getFlooredTime() {
   return date;
 }
 
-// function getWindBearingFromDirection(direction) {
-//   if (!direction) return 0;
-//   switch (direction.trim().toUpperCase()) {
-//     case 'N':
-//       return 0;
-//     case 'NNE':
-//       return 22.5;
-//     case 'NE':
-//       return 45;
-//     case 'ENE':
-//       return 67.5;
-//     case 'E':
-//       return 90;
-//     case 'ESE':
-//       return 112.5;
-//     case 'SE':
-//       return 135;
-//     case 'SSE':
-//       return 157.5;
-//     case 'S':
-//       return 180;
-//     case 'SSW':
-//       return 202.5;
-//     case 'SW':
-//       return 225;
-//     case 'WSW':
-//       return 247.5;
-//     case 'W':
-//       return 270;
-//     case 'WNW':
-//       return 292.5;
-//     case 'NW':
-//       return 325;
-//     case 'NNW':
-//       return 337.5;
-//     default:
-//       return 0;
-//   }
-// }
+function getWindBearingFromDirection(direction) {
+  if (!direction) return 0;
+  switch (direction.trim().toUpperCase()) {
+    case 'N':
+      return 0;
+    case 'NNE':
+      return 22.5;
+    case 'NE':
+      return 45;
+    case 'ENE':
+      return 67.5;
+    case 'E':
+      return 90;
+    case 'ESE':
+      return 112.5;
+    case 'SE':
+      return 135;
+    case 'SSE':
+      return 157.5;
+    case 'S':
+      return 180;
+    case 'SSW':
+      return 202.5;
+    case 'SW':
+      return 225;
+    case 'WSW':
+      return 247.5;
+    case 'W':
+      return 270;
+    case 'WNW':
+      return 292.5;
+    case 'NW':
+      return 325;
+    case 'NNW':
+      return 337.5;
+    default:
+      return 0;
+  }
+}
 
-async function getKrasonData() {
-  const result = new Map();
+async function getMeteoclimaticData(stationId) {
+  let windAverage = null;
+  const windGust = null;
+  let windBearing = null;
+  let temperature = null;
 
   try {
-    const { data } = await axios.get(
-      `https://zephyr-data-provider.fermyon.app/api/v1/measurements?token=${process.env.KRASON_TOKEN}`
-    );
-    if (data && data.length) {
-      for (const d of data) {
-        let item = {
-          windAverage: null,
-          windGust: null,
-          windBearing: null,
-          temperature: null
-        };
-        if (d) {
-          const lastUpdate = new Date(d.last_update);
-          // only update if data < 40 mins old
-          if (Date.now() - lastUpdate.getTime() < 40 * 60 * 1000) {
-            item = {
-              windAverage: d.wind_speed,
-              windGust: d.gusts_speed,
-              windBearing: d.wind_direction,
-              temperature: d.temperature
-            };
+    const response = await axios.request({
+      method: 'GET',
+      url: `https://www.meteoclimatic.net/perfil/${stationId}`,
+      responseType: 'arraybuffer',
+      responseEncoding: 'binary'
+    });
+
+    const data = iconv.decode(response.data, 'ISO-8859-15'); // encoded in iso8859-15
+    if (data.length) {
+      let lastUpdate = new Date();
+      let startStr = 'EL TIEMPO ACTUAL Última actualización';
+      let i = data.indexOf(startStr);
+      if (i >= 0) {
+        const j = data.indexOf('UTC', i + startStr.length);
+        if (j > i) {
+          const timeString = data.slice(i + startStr.length, j).trim();
+          lastUpdate = fromZonedTime(parse(timeString, 'dd-MM-yyyy HH:mm', new Date()), 'UTC');
+        }
+      }
+
+      // update if <40 mins
+      if (Date.now() - lastUpdate.getTime() < 40 * 60 * 1000) {
+        // temperature
+        startStr = 'class="dadesactuals">';
+        i = data.indexOf(startStr);
+        if (i > 0) {
+          const j = data.indexOf('ºC</td>', i + startStr.length);
+          if (j > i) {
+            temperature = Number(data.slice(i + startStr.length, j).trim());
           }
         }
-        result.set(d.station_id, item);
+
+        // wind avg + direction
+        i = data.indexOf(startStr, i + startStr.length); // skip next occurence
+        i = data.indexOf(startStr, i + startStr.length);
+        if (i > 0) {
+          // direction
+          const startStr1 = '&nbsp;&nbsp;';
+          const j = data.indexOf(startStr1, i + startStr.length);
+          if (j > i) {
+            const direction = data.slice(i + startStr.length, j).trim();
+            windBearing = getWindBearingFromDirection(direction);
+          }
+          // avg
+          const k = data.indexOf('km/h', j + startStr1.length);
+          if (k > j) {
+            windAverage = Number(data.slice(j + startStr1.length, k).trim());
+          }
+        }
       }
     }
   } catch (error) {
-    logger.warn('An error occured while fetching data for krason', {
+    logger.warn(`An error occured while fetching data for meteocat - ${stationId}`, {
       service: 'station',
-      type: 'krason'
+      type: 'other'
     });
   }
 
-  return result;
+  return {
+    windAverage,
+    windGust,
+    windBearing,
+    temperature
+  };
 }
 
 async function getMeteoCatData(stationId) {
@@ -274,13 +310,11 @@ export async function stationWrapper() {
       return null;
     }
 
-    const krasonData = await getKrasonData();
-
     const date = getFlooredTime();
     for (const s of stations) {
       let data = null;
-      if (s.type === 'krason') {
-        data = krasonData.get(s.externalId);
+      if (s.type === 'meteoclimatic') {
+        data = await getMeteoclimaticData(s.externalId);
       } else if (s.type === 'meteocat') {
         data = await getMeteoCatData(s.externalId);
       } else if (s.type === 'weatherlink') {

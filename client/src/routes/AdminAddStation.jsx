@@ -181,7 +181,7 @@ export default function AdminAddStation() {
                   setType(e.target.value);
                 }}
               >
-                <MenuItem value="krason">Krason</MenuItem>
+                <MenuItem value="meteoclimatic">meteoclimatic</MenuItem>
                 <MenuItem value="weatherlink">WeatherLink</MenuItem>
                 <MenuItem value="meteocat">meteo.cat</MenuItem>
               </TextField>
