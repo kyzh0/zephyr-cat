@@ -39,19 +39,19 @@ function getWindBearingFromDirection(direction) {
       return 157.5;
     case 'S':
       return 180;
-    case 'SSW':
+    case 'SSO':
       return 202.5;
-    case 'SW':
+    case 'SO':
       return 225;
-    case 'WSW':
+    case 'OSO':
       return 247.5;
-    case 'W':
+    case 'O':
       return 270;
-    case 'WNW':
+    case 'ONO':
       return 292.5;
-    case 'NW':
+    case 'NO':
       return 325;
-    case 'NNW':
+    case 'NNO':
       return 337.5;
     default:
       return 0;
@@ -190,6 +190,11 @@ async function getMeteoCatData(stationId) {
                   if (values[5] !== '(s/d)') windAverage = Number(values[5]);
                   if (values[7] !== '(s/d)') windGust = Number(values[7]);
                   if (values[6] !== '(s/d)') windBearing = Number(values[6]);
+                  if (values[0] !== '(s/d)') temperature = Number(values[0]);
+                } else if (values.length === 10) {
+                  if (values[6] !== '(s/d)') windAverage = Number(values[6]);
+                  if (values[8] !== '(s/d)') windGust = Number(values[8]);
+                  if (values[7] !== '(s/d)') windBearing = Number(values[7]);
                   if (values[0] !== '(s/d)') temperature = Number(values[0]);
                 }
               }
