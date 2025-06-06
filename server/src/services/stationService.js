@@ -150,10 +150,10 @@ async function getMeteoCatData(stationId) {
                 const cellData = lastRowData.slice(i, j);
                 const values = cellData.replaceAll('<td>', '').replace(/\s/g, '').split('</td>');
 
-                if (values.length === 10) {
-                  if (values[6] !== '(s/d)') windAverage = Number(values[6]);
-                  if (values[8] !== '(s/d)') windGust = Number(values[8]);
-                  if (values[7] !== '(s/d)') windBearing = Number(values[7]);
+                if (values.length === 9) {
+                  if (values[5] !== '(s/d)') windAverage = Number(values[5]);
+                  if (values[7] !== '(s/d)') windGust = Number(values[7]);
+                  if (values[6] !== '(s/d)') windBearing = Number(values[6]);
                   if (values[0] !== '(s/d)') temperature = Number(values[0]);
                 }
               }
