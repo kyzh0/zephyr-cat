@@ -202,7 +202,8 @@ async function getMeteoCatData(stationId) {
           dataAgeMinutes = hourDiff * 60 + minuteDiff;
         }
 
-        if (dataAgeMinutes <= 40) {
+        // ignore old data
+        if (dataAgeMinutes <= 60) {
           j = data.indexOf('</tr>', i + startStr.length);
           if (j > i) {
             const lastRowData = data
