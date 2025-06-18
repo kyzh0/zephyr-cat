@@ -203,7 +203,7 @@ async function getMeteoCatData(stationId) {
         }
 
         // ignore old data
-        if (dataAgeMinutes <= 60) {
+        if (dataAgeMinutes <= 40) {
           j = data.indexOf('</tr>', i + startStr.length);
           if (j > i) {
             const lastRowData = data

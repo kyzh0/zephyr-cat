@@ -41,6 +41,7 @@ export default function Help() {
     setMessageError(false);
 
     const data = new FormData(e.currentTarget);
+    data.source = 'Catalunya';
     const email = data.get('user_email').trim();
     const message = data.get('message').trim();
 
