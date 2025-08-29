@@ -10,7 +10,7 @@ import camRoute from './routes/camRoute.js';
 
 import logger from './helpers/log.js';
 import { removeOldImages, webcamWrapper } from './services/camService.js';
-import { stationWrapper, checkForErrors } from './services/stationService.js';
+import { stationWrapper, checkForErrors, removeOldData } from './services/stationService.js';
 
 const app = express();
 app.use(cors({ origin: [/zephyrapp\.nz$/, /^http(s)?:\/\/localhost:\d{4}.*$/] }));
@@ -53,7 +53,7 @@ cron.schedule('*/10 * * * *', async () => {
 });
 
 // errors
-cron.schedule('0 */6 * * *', async () => {
+cron.schedule('5 */6 * * *', async () => {
   logger.info('--- Check errors start ---', { service: 'errors' });
   const ts = Date.now();
   await checkForErrors();
@@ -61,7 +61,13 @@ cron.schedule('0 */6 * * *', async () => {
 });
 
 // cleanup
-cron.schedule('0 0 * * *', async () => {
+cron.schedule('5 0 * * *', async () => {
+  logger.info('--- Remove old data start ---', { service: 'cleanup' });
+  const ts = Date.now();
+  await removeOldData();
+  logger.info(`--- Remove old data end - ${Date.now() - ts}ms elapsed.`, { service: 'cleanup' });
+});
+cron.schedule('5 0 * * *', async () => {
   logger.info('--- Remove old images start ---', { service: 'cleanup' });
   const ts = Date.now();
   await removeOldImages();

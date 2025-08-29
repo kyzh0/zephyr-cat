@@ -495,3 +495,22 @@ export async function checkForErrors() {
     return null;
   }
 }
+
+export async function removeOldData() {
+  try {
+    const stations = await Station.find({});
+    if (!stations.length) {
+      logger.error('No stations found.', { service: 'cleanup' });
+      return null;
+    }
+
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // 7 days
+    for (const s of stations) {
+      await Station.updateOne({ _id: s._id }, { $pull: { data: { time: { $lte: cutoff } } } });
+    }
+  } catch (error) {
+    logger.error('An error occurred while removing old data', { service: 'cleanup' });
+    logger.error(error, { service: 'cleanup' });
+    return null;
+  }
+}
