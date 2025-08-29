@@ -96,25 +96,32 @@ router.get('/data', async (req, res) => {
 
   // select data for 30 min interval ending at specified time
   const data = await Station.aggregate([
+    { $unwind: '$data' },
+    {
+      $match: {
+        'data.time': {
+          $gt: timeFrom,
+          $lte: timeTo
+        }
+      }
+    },
+    {
+      $group: {
+        _id: { stationId: '$_id', validBearings: '$validBearings' },
+        data: { $push: '$data' }
+      }
+    },
     {
       $project: {
-        _id: 1,
-        validBearings: 1,
-        data: {
-          $filter: {
-            input: '$data',
-            as: 'd',
-            cond: {
-              $and: [{ $gte: ['$$d.time', timeFrom] }, { $lte: ['$$d.time', timeTo] }]
-            }
-          }
-        }
+        _id: '$_id.stationId',
+        validBearings: '$_id.validBearings',
+        data: 1
       }
     }
   ]);
 
   if (!data.length) {
-    res.json([]);
+    res.json({ time: new Date().toISOString(), values: [] });
     return;
   }
 
