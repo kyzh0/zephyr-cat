@@ -5,14 +5,26 @@ import { formatInTimeZone } from 'date-fns-tz';
 import { AppContext } from '../context/AppContext';
 import { getWindDirectionFromBearing } from '../helpers/utils';
 
-import { getStationById, listStations, listStationsUpdatedSince } from '../services/stationService';
+import {
+  getStationById,
+  listStations,
+  listStationsUpdatedSince,
+  loadAllStationDataAtTimestamp
+} from '../services/stationService';
 import { getCamById, listCams, listCamsUpdatedSince } from '../services/camService';
 
 import { createTheme, ThemeProvider } from '@mui/material';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import IconButton from '@mui/material/IconButton';
+import Slider from '@mui/material/Slider';
+import Typography from '@mui/material/Typography';
+
 import GridViewIcon from '@mui/icons-material/GridView';
+import LandscapeOutlinedIcon from '@mui/icons-material/LandscapeOutlined';
+import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
+import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
+import CloseIcon from '@mui/icons-material/Close';
 
 import MapTerrainControl from './MapTerrainControl';
 import MapUnitControl from './MapUnitControl';
@@ -42,6 +54,12 @@ export default function Map() {
   const [webcamMarkers] = useState([]);
   // const [showWebcams, setShowWebcams] = useState(false);
   const webcamsHiddenRef = useRef(true);
+
+  const [showElevation, setShowElevation] = useState(false);
+  const [elevationFilter, setElevationFilter] = useState(0);
+
+  const [historyOffset, setHistoryOffset] = useState(0);
+  const [historyData, setHistoryData] = useState({});
 
   const unitRef = useRef('kmh');
   const [posInit, setPosInit] = useState(false);
@@ -91,7 +109,7 @@ export default function Map() {
     let img = '';
 
     if (isOffline) {
-      textColor = 'red';
+      textColor = '#ff4261';
       img = `url('/circle-white.png')`;
       return [img, textColor];
     }
@@ -173,6 +191,7 @@ export default function Map() {
         properties: {
           name: station.name,
           dbId: station._id,
+          elevation: station.elevation,
           currentAverage: avg,
           currentGust: gust,
           currentBearing:
@@ -248,19 +267,29 @@ export default function Map() {
       return a.properties.currentAverage - b.properties.currentAverage;
     });
 
+    const currentValues = [];
     for (const f of geoJson.features) {
       const name = f.properties.name;
       const dbId = f.properties.dbId;
+      const elevation = f.properties.elevation;
       const currentAvg = f.properties.currentAverage;
       const currentGust = f.properties.currentGust;
       const currentBearing = f.properties.currentBearing;
       const validBearings = f.properties.validBearings;
       const isOffline = f.properties.isOffline;
 
+      currentValues.push({
+        id: dbId,
+        windAverage: currentAvg,
+        windBearing: currentBearing,
+        validBearings: validBearings,
+        isOffline: isOffline
+      });
+
       // popup
       let html = `<p align="center"><strong>${name}</strong></p>`;
       if (isOffline) {
-        html += '<p style="color: red;" align="center">Offline</p>';
+        html += '<p style="color: #ff4261;" align="center">Offline</p>';
       } else {
         if (currentAvg == null && currentGust == null) {
           html += `<p align="center">-</p>`;
@@ -317,19 +346,49 @@ export default function Map() {
       text.addEventListener('mouseenter', () => popup.addTo(map.current));
       text.addEventListener('mouseleave', () => popup.remove());
 
+      // elevation dashed border
+      let angle = (currentBearing ?? 0) + 127;
+      if (angle >= 360) angle -= 360;
+      const d1 = elevation >= 250 ? 30 : 0;
+      const d2 = elevation >= 500 ? 30 : 0;
+      const d3 = elevation >= 750 ? 30 : 0;
+      const d4 = elevation >= 1000 ? 30 : 0;
+      const d5 = elevation >= 1250 ? 30 : 0;
+      const d6 = elevation >= 1500 ? 30 : 0;
+      const borderSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      borderSvg.setAttribute('class', 'marker-border displaynone');
+      borderSvg.setAttribute('viewBox', '0 0 120 120');
+      borderSvg.setAttribute('transform', `rotate(${angle})`);
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('fill', 'none');
+      circle.setAttribute('cx', '60');
+      circle.setAttribute('cy', '60');
+      circle.setAttribute('r', '56');
+      circle.setAttribute('stroke', '#ff4261');
+      circle.setAttribute('stroke-width', '8');
+      circle.setAttribute(
+        'stroke-dasharray',
+        `${d1} 20 ${d2} 20 ${d3} 20 ${d4} 20 ${d5} 20 ${d6} 1000`
+      );
+      borderSvg.appendChild(circle);
+
       // parent element
       const el = document.createElement('div');
       el.id = dbId;
+      el.setAttribute('elevation', elevation);
       el.className = 'marker';
       el.dataset.timestamp = timestamp;
       el.dataset.avg = currentAvg == null ? '' : currentAvg;
       el.dataset.gust = currentGust == null ? '' : currentGust;
       el.appendChild(arrow);
       el.appendChild(text);
+      el.appendChild(borderSvg);
 
       stationMarkers.push({ marker: el, popup: popup });
       new mapboxgl.Marker(el).setLngLat(f.geometry.coordinates).setPopup(popup).addTo(map.current);
     }
+
+    setHistoryData({ 0: { time: new Date().toISOString(), values: currentValues } });
   }
 
   const lastWebcamRefreshRef = useRef(0);
@@ -373,7 +432,7 @@ export default function Map() {
         // don't display cams that havent updated in last 24h
         img.src = '';
         text1.innerHTML = 'No images in the last 24h.';
-        text1.style.color = 'red';
+        text1.style.color = '#ff4261';
       }
       el.appendChild(img);
       el.appendChild(text1);
@@ -385,6 +444,7 @@ export default function Map() {
   async function refreshStations() {
     if (document.visibilityState !== 'visible') return;
     if (!stationMarkers.length) return;
+    if (historyOffset < 0) return;
 
     let timestamp = Date.now();
     if (timestamp - lastStationRefreshRef.current < REFRESH_INTERVAL_SECONDS * 1000) return; // enforce refresh interval
@@ -468,12 +528,16 @@ export default function Map() {
           child.style.backgroundImage = img;
           child.style.transform =
             currentBearing == null ? '' : `rotate(${Math.round(currentBearing)}deg)`;
+        } else if (child.classList.contains('marker-border')) {
+          let angle = (currentBearing ?? 0) + 127;
+          if (angle >= 360) angle -= 360;
+          child.setAttribute('transform', `rotate(${angle})`);
         }
 
         // update popup
         let html = `<p align="center"><strong>${name}</strong></p>`;
         if (isOffline) {
-          html += '<p style="color: red;" align="center">Offline</p>';
+          html += '<p style="color: #ff4261;" align="center">Offline</p>';
         } else {
           if (currentAvg == null && currentGust == null) {
             html += `<p align="center">-</p>`;
@@ -569,7 +633,7 @@ export default function Map() {
         } else if (child.className === 'webcam-text-date') {
           if (timestamp - currentTime.getTime() > 24 * 60 * 60 * 1000) {
             child.innerHTML = 'No images in the last 24h.';
-            child.style.color = 'red';
+            child.style.color = '#ff4261';
           } else {
             child.innerHTML = formatInTimeZone(currentTime, 'CET', 'dd MMM HH:mm');
             child.style.color = '';
@@ -618,6 +682,145 @@ export default function Map() {
     }
   }, [cookies.unit]);
 
+  // show/hide elevation borders
+  useEffect(() => {
+    const borders = document.querySelectorAll('svg.marker-border');
+    if (showElevation) for (const b of borders) b.classList.remove('displaynone');
+    else for (const b of borders) b.classList.add('displaynone');
+  }, [showElevation]);
+
+  // filter by elevation
+  useEffect(() => {
+    const markers = document.querySelectorAll('div.marker');
+    for (const m of markers) {
+      if (Number(m.getAttribute('elevation')) < elevationFilter) m.classList.add('displaynone');
+      else m.classList.remove('displaynone');
+    }
+  }, [elevationFilter]);
+
+  async function renderHistoricalData(time) {
+    let data = [];
+    // use cached values if current
+    if (
+      historyData[historyOffset] &&
+      new Date().getTime() - new Date(historyData[historyOffset].time).getTime() < 10 * 60 * 1000
+    ) {
+      data = historyData[historyOffset];
+    } else {
+      data = await loadAllStationDataAtTimestamp(time);
+    }
+
+    if (!data || !data.values || !data.values.length) {
+      setHistoryOffset(0);
+      return;
+    }
+
+    historyData[historyOffset] = data;
+    renderData(data.values);
+  }
+
+  async function renderCurrentData() {
+    let data = [];
+    if (
+      historyData['0'] &&
+      new Date().getTime() - new Date(historyData['0'].time).getTime() < 10 * 60 * 1000
+    ) {
+      // used cached values if current
+      data = historyData['0'].values;
+    } else {
+      const stations = await listStations();
+      for (const s of stations) {
+        data.push({
+          id: s._id,
+          windAverage: s.currentAverage,
+          windBearing: s.currentBearing,
+          validBearings: s.validBearings,
+          isOffline: s.isOffline
+        });
+      }
+    }
+
+    // redraw markers with current data
+    renderData(data);
+  }
+
+  function renderData(data) {
+    for (const item of stationMarkers) {
+      const matches = data.filter((d) => {
+        return d.id === item.marker.id;
+      });
+      if (!matches || !matches.length) continue;
+
+      const d = matches[0];
+      item.marker.dataset.avg = d.windAverage == null ? '' : d.windAverage;
+      for (const child of item.marker.children) {
+        const [img, color] = getArrowStyle(
+          d.windAverage,
+          d.windBearing,
+          d.validBearings,
+          d.isOffline
+        );
+        if (child.className === 'marker-text') {
+          child.style.color = color;
+          if (d.isOffline) {
+            child.innerHTML = 'X';
+          } else {
+            child.innerHTML =
+              d.windAverage == null
+                ? '-'
+                : Math.round(unitRef.current === 'kt' ? d.windAverage / 1.852 : d.windAverage);
+          }
+        } else if (child.className === 'marker-arrow') {
+          child.style.backgroundImage = img;
+          child.style.transform =
+            d.windBearing == null ? '' : `rotate(${Math.round(d.windBearing)}deg)`;
+        } else if (child.classList.contains('marker-border')) {
+          let angle = (d.windBearing ?? 0) + 127;
+          if (angle >= 360) angle -= 360;
+          child.setAttribute('transform', `rotate(${angle})`);
+        }
+      }
+    }
+  }
+
+  // show historical data
+  useEffect(() => {
+    if (!stationMarkers || !stationMarkers.length) return;
+
+    // disable some click events
+    const gridBtn = document.querySelector('#grid-button');
+    // const camBtn = document.querySelector('#webcam-button');
+    const markers = document.querySelectorAll('div.marker');
+    if (historyOffset < 0) {
+      // if (showWebcams) handleWebcamClick();
+      gridBtn.classList.add('noclick');
+      gridBtn.classList.add('map-button-disabled');
+      // camBtn.classList.add('noclick');
+      // camBtn.classList.add('map-button-disabled');
+      for (const m of markers) m.classList.add('noclick');
+    } else {
+      gridBtn.classList.remove('noclick');
+      gridBtn.classList.remove('map-button-disabled');
+      // camBtn.classList.remove('noclick');
+      // camBtn.classList.remove('map-button-disabled');
+      for (const m of markers) m.classList.remove('noclick');
+    }
+
+    if (historyOffset < 0) {
+      const t = new Date();
+      // nearest 30 min mark
+      const time = new Date(
+        t.getTime() -
+          ((t.getMinutes() % 30) - historyOffset) * 60 * 1000 -
+          t.getSeconds() * 1000 -
+          t.getMilliseconds()
+      );
+      renderHistoricalData(time);
+    } else {
+      renderCurrentData();
+    }
+  }, [historyOffset]);
+
   const map = useRef(null);
   const mapContainer = useRef(null);
 
@@ -642,12 +845,6 @@ export default function Map() {
     map.current.touchZoomRotate.disableRotation();
 
     // map controls
-    map.current.addControl(
-      new mapboxgl.NavigationControl({
-        showCompass: false
-      }),
-      'top-right'
-    );
     map.current.addControl(new MapTerrainControl(), 'top-right');
     map.current.addControl(new MapUnitControl(), 'top-right');
     map.current.addControl(
@@ -722,6 +919,18 @@ export default function Map() {
   //   setShowWebcams(!showWebcams);
   // }
 
+  function handleHistoryLeftClick() {
+    let newOffset = historyOffset - 30;
+    if (newOffset < -10080) newOffset = -10080;
+    setHistoryOffset(newOffset);
+  }
+
+  function handleHistoryRightClick() {
+    let newOffset = historyOffset + 30;
+    if (newOffset > 0) newOffset = 0;
+    setHistoryOffset(newOffset);
+  }
+
   return (
     <ThemeProvider theme={theme}>
       <Stack
@@ -730,28 +939,14 @@ export default function Map() {
           position: 'absolute',
           top: 0,
           left: 0,
-          height: '100vh',
+          height: '100dvh',
           width: '100vw'
         }}
       >
         <IconButton
           color="primary"
-          sx={{
-            backgroundColor: 'white',
-            color: '#333333',
-            borderRadius: '4px',
-            boxShadow: '0 0 0 2px rgba(0,0,0,.1)',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            m: '10px',
-            width: '29px',
-            height: '29px',
-            zIndex: 5,
-            '&:hover': {
-              backgroundColor: '#f2f2f2'
-            }
-          }}
+          className="map-button"
+          sx={{ left: 0 }}
           onClick={() => {
             navigate('/help');
           }}
@@ -766,22 +961,9 @@ export default function Map() {
         </IconButton>
         <IconButton
           color="primary"
-          sx={{
-            backgroundColor: 'white',
-            color: '#333333',
-            borderRadius: '4px',
-            boxShadow: '0 0 0 2px rgba(0,0,0,.1)',
-            position: 'absolute',
-            top: 0,
-            left: 35,
-            m: '10px',
-            width: '29px',
-            height: '29px',
-            zIndex: 5,
-            '&:hover': {
-              backgroundColor: '#f2f2f2'
-            }
-          }}
+          id="grid-button"
+          className="map-button"
+          sx={{ left: 35 }}
           onClick={() => {
             navigate('/grid');
           }}
@@ -790,22 +972,9 @@ export default function Map() {
         </IconButton>
         {/* <IconButton
           color="primary"
-          sx={{
-            backgroundColor: 'white',
-            color: '#333333',
-            borderRadius: '4px',
-            boxShadow: '0 0 0 2px rgba(0,0,0,.1)',
-            position: 'absolute',
-            top: 0,
-            left: 70,
-            m: '10px',
-            width: '29px',
-            height: '29px',
-            zIndex: 5,
-            '&:hover': {
-              backgroundColor: '#f2f2f2'
-            }
-          }}
+          id="webcam-button"
+          className="map-button"
+          sx={{ left: 70 }}
           onClick={handleWebcamClick}
         >
           <img
@@ -817,6 +986,89 @@ export default function Map() {
             }}
           />
         </IconButton> */}
+        <IconButton
+          color="primary"
+          className="map-button"
+          sx={{ right: 0, top: 115 }}
+          onClick={() => {
+            setShowElevation(!showElevation);
+          }}
+        >
+          <LandscapeOutlinedIcon
+            sx={{
+              width: '30px',
+              height: '20px',
+              opacity: showElevation ? 1 : 0.7
+            }}
+          />
+        </IconButton>
+        <Slider
+          className="elevation-slider"
+          orientation="vertical"
+          size="small"
+          step={250}
+          min={0}
+          max={1500}
+          value={elevationFilter}
+          onChange={(event, value) => setElevationFilter(value)}
+        />
+        {elevationFilter > 0 && <Box className="elevation-slider-label">&gt;{elevationFilter}</Box>}
+        <Slider
+          className="history-slider"
+          size="small"
+          step={30}
+          min={-10080}
+          max={0}
+          value={historyOffset}
+          onChange={(event, value) => setHistoryOffset(value)}
+        />
+        {historyOffset < 0 && (
+          <Box className="history-slider-label">
+            <IconButton sx={{ p: 0 }} onClick={() => setHistoryOffset(0)}>
+              <CloseIcon sx={{ width: '10px', height: '10px' }} />
+            </IconButton>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              sx={{ width: '100%', height: '100%', marginTop: '-10px' }}
+            >
+              <IconButton onClick={() => handleHistoryLeftClick()}>
+                <KeyboardArrowLeftIcon />
+              </IconButton>
+              <Stack
+                direction="column"
+                justifyContent="center"
+                alignItems="center"
+                sx={{ width: '100%', height: '100%' }}
+              >
+                <Typography
+                  component="p"
+                  variant="body2"
+                  textAlign="center"
+                  sx={{ fontSize: '10px' }}
+                >
+                  SNAPSHOT
+                </Typography>
+                <Typography component="p" variant="body2" textAlign="center">
+                  {formatInTimeZone(
+                    new Date(
+                      new Date().getTime() -
+                        ((new Date().getMinutes() % 30) - historyOffset) * 60 * 1000 -
+                        new Date().getSeconds() * 1000 -
+                        new Date().getMilliseconds()
+                    ),
+                    'CET',
+                    'EEE dd MMM HH:mm'
+                  )}
+                </Typography>
+              </Stack>
+              <IconButton onClick={() => handleHistoryRightClick()}>
+                <KeyboardArrowRightIcon />
+              </IconButton>
+            </Stack>
+          </Box>
+        )}
         <Box
           ref={mapContainer}
           sx={{
