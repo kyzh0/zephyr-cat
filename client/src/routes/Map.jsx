@@ -3,7 +3,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { useCookies } from 'react-cookie';
 import { formatInTimeZone } from 'date-fns-tz';
 import { AppContext } from '../context/AppContext';
-import { getWindDirectionFromBearing } from '../helpers/utils';
+import { getWindDirectionFromBearing } from '../lib/utils';
 
 import {
   getStationById,
@@ -32,8 +32,6 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 import './Map.css';
-
-import { FILESERVERROOT } from '../helpers/constants';
 
 export default function Map() {
   let theme = createTheme({
@@ -77,17 +75,23 @@ export default function Map() {
   // read cookies
   useEffect(() => {
     if (cookies.lon) {
-      if (!isNaN(cookies.lon) && cookies.lon >= -180 && cookies.lon <= 180) setLon(cookies.lon);
+      if (!isNaN(cookies.lon) && cookies.lon >= -180 && cookies.lon <= 180) {
+        setLon(cookies.lon);
+      }
     } else {
       setCookies('lon', 1.81, cookiesOptions);
     }
     if (cookies.lat) {
-      if (!isNaN(cookies.lat) && cookies.lat >= -90 && cookies.lat <= 90) setLat(cookies.lat);
+      if (!isNaN(cookies.lat) && cookies.lat >= -90 && cookies.lat <= 90) {
+        setLat(cookies.lat);
+      }
     } else {
       setCookies('lat', 42.09, cookiesOptions);
     }
     if (cookies.zoom) {
-      if (!isNaN(cookies.zoom)) setZoom(cookies.zoom);
+      if (!isNaN(cookies.zoom)) {
+        setZoom(cookies.zoom);
+      }
     } else {
       setCookies('zoom', window.innerWidth > 1000 ? 8 : 7, cookiesOptions);
     }
@@ -173,7 +177,9 @@ export default function Map() {
   }
 
   function getStationGeoJson(stations) {
-    if (!stations || !stations.length) return null;
+    if (!stations || !stations.length) {
+      return null;
+    }
 
     const geoJson = {
       type: 'FeatureCollection',
@@ -211,7 +217,9 @@ export default function Map() {
   }
 
   function getWebcamGeoJson(webcams) {
-    if (!webcams || !webcams.length) return null;
+    if (!webcams || !webcams.length) {
+      return null;
+    }
 
     const geoJson = {
       type: 'FeatureCollection',
@@ -236,7 +244,9 @@ export default function Map() {
   const lastStationRefreshRef = useRef(0);
   async function initialiseStations() {
     const geoJson = getStationGeoJson(await listStations());
-    if (!map.current || !geoJson || !geoJson.features.length) return;
+    if (!map.current || !geoJson || !geoJson.features.length) {
+      return;
+    }
 
     const timestamp = Date.now();
     lastStationRefreshRef.current = timestamp;
@@ -348,7 +358,9 @@ export default function Map() {
 
       // elevation dashed border
       let angle = (currentBearing ?? 0) + 127;
-      if (angle >= 360) angle -= 360;
+      if (angle >= 360) {
+        angle -= 360;
+      }
       const d1 = elevation >= 250 ? 30 : 0;
       const d2 = elevation >= 500 ? 30 : 0;
       const d3 = elevation >= 750 ? 30 : 0;
@@ -394,7 +406,9 @@ export default function Map() {
   const lastWebcamRefreshRef = useRef(0);
   async function initialiseWebcams() {
     const geoJson = getWebcamGeoJson(await listCams());
-    if (!map.current || !geoJson || !geoJson.features.length) return;
+    if (!map.current || !geoJson || !geoJson.features.length) {
+      return;
+    }
 
     const timestamp = Date.now();
     lastWebcamRefreshRef.current = timestamp;
@@ -407,7 +421,7 @@ export default function Map() {
 
       const img = document.createElement('img');
       img.width = 150;
-      img.src = `${FILESERVERROOT}/${currentUrl}`;
+      img.src = `${process.env.REACT_APP_FILE_SERVER_PREFIX}/${currentUrl}`;
       img.className = 'webcam-img';
 
       const text = document.createElement('span');
@@ -442,20 +456,26 @@ export default function Map() {
     }
   }
   async function refreshStations() {
-    if (document.visibilityState !== 'visible') return;
-    if (!stationMarkers.length) return;
-    if (historyOffset < 0) return;
+    if (document.visibilityState !== 'visible') {
+      return;
+    }
+    if (!stationMarkers.length) {
+      return;
+    }
+    if (historyOffset < 0) {
+      return;
+    }
 
     let timestamp = Date.now();
-    if (timestamp - lastStationRefreshRef.current < REFRESH_INTERVAL_SECONDS * 1000) return; // enforce refresh interval
+    if (timestamp - lastStationRefreshRef.current < REFRESH_INTERVAL_SECONDS * 1000) {
+      return;
+    } // enforce refresh interval
     lastStationRefreshRef.current = timestamp;
 
     // update marker styling
-    const newestMarker = stationMarkers.reduce((prev, current) => {
-      return prev && prev.marker.dataset.timestamp > current.marker.dataset.timestamp
-        ? prev
-        : current;
-    });
+    const newestMarker = stationMarkers.reduce((prev, current) =>
+      prev && prev.marker.dataset.timestamp > current.marker.dataset.timestamp ? prev : current
+    );
     const stations = await listStationsUpdatedSince(
       Math.round(Number(newestMarker.marker.dataset.timestamp) / 1000)
     );
@@ -463,7 +483,9 @@ export default function Map() {
     if (!geoJson || !geoJson.features.length) {
       // check for missed updates
       let distinctTimestamps = [...new Set(stationMarkers.map((m) => m.marker.dataset.timestamp))];
-      if (distinctTimestamps.length < 2) return;
+      if (distinctTimestamps.length < 2) {
+        return;
+      }
 
       // find oldest and next oldest timestamp
       let min = Infinity;
@@ -481,25 +503,27 @@ export default function Map() {
       // the next oldest timestamp, then we missed some records
       if (secondMin - min > 1.1 * REFRESH_INTERVAL_SECONDS * 1000) {
         const stations = [];
-        const oldestMarkers = stationMarkers.filter((m) => {
-          return m.marker.dataset.timestamp === min;
-        });
+        const oldestMarkers = stationMarkers.filter((m) => m.marker.dataset.timestamp === min);
         for (const m of oldestMarkers) {
           const station = await getStationById(m.marker.id);
-          if (station) stations.push(station);
+          if (station) {
+            stations.push(station);
+          }
         }
         geoJson = getStationGeoJson(stations);
         timestamp = secondMin; // update missed records with the oldest valid timestamp
       }
-      if (!geoJson || !geoJson.features.length) return;
+      if (!geoJson || !geoJson.features.length) {
+        return;
+      }
     }
 
     const updatedIds = [];
     for (const item of stationMarkers) {
-      const matches = geoJson.features.filter((f) => {
-        return f.properties.dbId === item.marker.id;
-      });
-      if (!matches || !matches.length) continue;
+      const matches = geoJson.features.filter((f) => f.properties.dbId === item.marker.id);
+      if (!matches || !matches.length) {
+        continue;
+      }
 
       const f = matches[0];
       const name = f.properties.name;
@@ -530,7 +554,9 @@ export default function Map() {
             currentBearing == null ? '' : `rotate(${Math.round(currentBearing)}deg)`;
         } else if (child.classList.contains('marker-border')) {
           let angle = (currentBearing ?? 0) + 127;
-          if (angle >= 360) angle -= 360;
+          if (angle >= 360) {
+            angle -= 360;
+          }
           child.setAttribute('transform', `rotate(${angle})`);
         }
 
@@ -564,18 +590,26 @@ export default function Map() {
   }
 
   async function refreshWebcams() {
-    if (document.visibilityState !== 'visible') return;
-    if (webcamsHiddenRef.current) return;
-    if (!webcamMarkers.length) return;
+    if (document.visibilityState !== 'visible') {
+      return;
+    }
+    if (webcamsHiddenRef.current) {
+      return;
+    }
+    if (!webcamMarkers.length) {
+      return;
+    }
 
     let timestamp = Date.now();
-    if (timestamp - lastWebcamRefreshRef.current < REFRESH_INTERVAL_SECONDS * 1000) return; // enforce refresh interval
+    if (timestamp - lastWebcamRefreshRef.current < REFRESH_INTERVAL_SECONDS * 1000) {
+      return;
+    } // enforce refresh interval
     lastWebcamRefreshRef.current = timestamp;
 
     // update marker styling
-    const newestMarker = webcamMarkers.reduce((prev, current) => {
-      return prev && prev.dataset.timestamp > current.dataset.timestamp ? prev : current;
-    });
+    const newestMarker = webcamMarkers.reduce((prev, current) =>
+      prev && prev.dataset.timestamp > current.dataset.timestamp ? prev : current
+    );
     const webcams = await listCamsUpdatedSince(
       Math.round(Number(newestMarker.dataset.timestamp) / 1000)
     );
@@ -583,7 +617,9 @@ export default function Map() {
     if (!geoJson || !geoJson.features.length) {
       // check for missed updates
       let distinctTimestamps = [...new Set(webcamMarkers.map((m) => m.dataset.timestamp))];
-      if (distinctTimestamps.length < 2) return;
+      if (distinctTimestamps.length < 2) {
+        return;
+      }
 
       let min = Infinity;
       let secondMin = Infinity;
@@ -598,25 +634,27 @@ export default function Map() {
 
       if (secondMin - min > 1.1 * REFRESH_INTERVAL_SECONDS * 1000) {
         const cams = [];
-        const oldestMarkers = webcamMarkers.filter((m) => {
-          return m.dataset.timestamp === min;
-        });
+        const oldestMarkers = webcamMarkers.filter((m) => m.dataset.timestamp === min);
         for (const m of oldestMarkers) {
           const cam = await getCamById(m.id);
-          if (cam) cams.push(cam);
+          if (cam) {
+            cams.push(cam);
+          }
         }
         geoJson = getWebcamGeoJson(cams);
         timestamp = secondMin; // update missed records with the oldest valid timestamp
       }
-      if (!geoJson || !geoJson.features.length) return;
+      if (!geoJson || !geoJson.features.length) {
+        return;
+      }
     }
 
     const updatedIds = [];
     for (const item of webcamMarkers) {
-      const matches = geoJson.features.filter((f) => {
-        return f.properties.dbId === item.id;
-      });
-      if (!matches || !matches.length) continue;
+      const matches = geoJson.features.filter((f) => f.properties.dbId === item.id);
+      if (!matches || !matches.length) {
+        continue;
+      }
 
       const f = matches[0];
       const currentTime = f.properties.currentTime;
@@ -629,7 +667,7 @@ export default function Map() {
           child.src =
             timestamp - currentTime.getTime() > 24 * 60 * 60 * 1000
               ? ''
-              : `${FILESERVERROOT}/${currentUrl}`;
+              : `${process.env.REACT_APP_FILE_SERVER_PREFIX}/${currentUrl}`;
         } else if (child.className === 'webcam-text-date') {
           if (timestamp - currentTime.getTime() > 24 * 60 * 60 * 1000) {
             child.innerHTML = 'No images in the last 24h.';
@@ -685,16 +723,26 @@ export default function Map() {
   // show/hide elevation borders
   useEffect(() => {
     const borders = document.querySelectorAll('svg.marker-border');
-    if (showElevation) for (const b of borders) b.classList.remove('displaynone');
-    else for (const b of borders) b.classList.add('displaynone');
+    if (showElevation) {
+      for (const b of borders) {
+        b.classList.remove('displaynone');
+      }
+    } else {
+      for (const b of borders) {
+        b.classList.add('displaynone');
+      }
+    }
   }, [showElevation]);
 
   // filter by elevation
   useEffect(() => {
     const markers = document.querySelectorAll('div.marker');
     for (const m of markers) {
-      if (Number(m.getAttribute('elevation')) < elevationFilter) m.classList.add('displaynone');
-      else m.classList.remove('displaynone');
+      if (Number(m.getAttribute('elevation')) < elevationFilter) {
+        m.classList.add('displaynone');
+      } else {
+        m.classList.remove('displaynone');
+      }
     }
   }, [elevationFilter]);
 
@@ -746,9 +794,7 @@ export default function Map() {
 
   function renderData(data) {
     for (const item of stationMarkers) {
-      const matches = data.filter((d) => {
-        return d.id === item.marker.id;
-      });
+      const matches = data.filter((d) => d.id === item.marker.id);
 
       let d = {
         windAverage: null,
@@ -756,7 +802,9 @@ export default function Map() {
         validBearings: null,
         isOffline: null
       };
-      if (matches && matches.length) d = matches[0];
+      if (matches && matches.length) {
+        d = matches[0];
+      }
 
       item.marker.dataset.avg = d.windAverage == null ? '' : d.windAverage;
       for (const child of item.marker.children) {
@@ -782,7 +830,9 @@ export default function Map() {
             d.windBearing == null ? '' : `rotate(${Math.round(d.windBearing)}deg)`;
         } else if (child.classList.contains('marker-border')) {
           let angle = (d.windBearing ?? 0) + 127;
-          if (angle >= 360) angle -= 360;
+          if (angle >= 360) {
+            angle -= 360;
+          }
           child.setAttribute('transform', `rotate(${angle})`);
         }
       }
@@ -791,7 +841,9 @@ export default function Map() {
 
   // show historical data
   useEffect(() => {
-    if (!stationMarkers || !stationMarkers.length) return;
+    if (!stationMarkers || !stationMarkers.length) {
+      return;
+    }
 
     // disable some click events
     const gridBtn = document.querySelector('#grid-button');
@@ -803,13 +855,17 @@ export default function Map() {
       gridBtn.classList.add('map-button-disabled');
       // camBtn.classList.add('noclick');
       // camBtn.classList.add('map-button-disabled');
-      for (const m of markers) m.classList.add('noclick');
+      for (const m of markers) {
+        m.classList.add('noclick');
+      }
     } else {
       gridBtn.classList.remove('noclick');
       gridBtn.classList.remove('map-button-disabled');
       // camBtn.classList.remove('noclick');
       // camBtn.classList.remove('map-button-disabled');
-      for (const m of markers) m.classList.remove('noclick');
+      for (const m of markers) {
+        m.classList.remove('noclick');
+      }
     }
 
     if (historyOffset < 0) {
@@ -837,7 +893,9 @@ export default function Map() {
       : process.env.REACT_APP_MAPBOX_GL_KEY_BACKUP;
 
     // map init
-    if (map.current) return;
+    if (map.current) {
+      return;
+    }
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/outdoors-v11',
@@ -894,8 +952,12 @@ export default function Map() {
 
   // fly to saved position after load
   useEffect(() => {
-    if (lon == 0 && lat == 0 && zoom == 0) return;
-    if (posInit || !map.current) return;
+    if (lon == 0 && lat == 0 && zoom == 0) {
+      return;
+    }
+    if (posInit || !map.current) {
+      return;
+    }
     map.current.flyTo({ center: [lon, lat], zoom: zoom });
     setPosInit(true);
   }, [lon, lat, zoom, map.current]);
@@ -927,13 +989,17 @@ export default function Map() {
 
   function handleHistoryLeftClick() {
     let newOffset = historyOffset - 30;
-    if (newOffset < -10080) newOffset = -10080;
+    if (newOffset < -10080) {
+      newOffset = -10080;
+    }
     setHistoryOffset(newOffset);
   }
 
   function handleHistoryRightClick() {
     let newOffset = historyOffset + 30;
-    if (newOffset > 0) newOffset = 0;
+    if (newOffset > 0) {
+      newOffset = 0;
+    }
     setHistoryOffset(newOffset);
   }
 

@@ -91,7 +91,9 @@ router.post('/', async (req, res) => {
 // get all station data for timestamp
 router.get('/data', async (req, res) => {
   let timeTo = new Date();
-  if (req.query.time) timeTo = new Date(req.query.time);
+  if (req.query.time) {
+    timeTo = new Date(req.query.time);
+  }
   const timeFrom = new Date(timeTo.getTime() - 30 * 60 * 1000);
 
   // select data for 30 min interval ending at specified time

@@ -11,15 +11,21 @@ function getFlooredTime() {
   // floor data timestamp to 10 min
   let date = new Date();
   let rem = date.getMinutes() % 10;
-  if (rem > 0) date = new Date(date.getTime() - rem * 60 * 1000);
+  if (rem > 0) {
+    date = new Date(date.getTime() - rem * 60 * 1000);
+  }
   rem = date.getSeconds() % 60;
-  if (rem > 0) date = new Date(date.getTime() - rem * 1000);
+  if (rem > 0) {
+    date = new Date(date.getTime() - rem * 1000);
+  }
   date = new Date(Math.floor(date.getTime() / 1000) * 1000);
   return date;
 }
 
 function getWindBearingFromDirection(direction) {
-  if (!direction) return 0;
+  if (!direction) {
+    return 0;
+  }
   switch (direction.trim().toUpperCase()) {
     case 'N':
       return 0;
@@ -218,11 +224,18 @@ async function getMeteoCatData(stationId) {
                 const cellData = lastRowData.slice(i, j);
                 const values = cellData.replaceAll('<td>', '').replace(/\s/g, '').split('</td>');
 
-                if (avgIdx > -1 && values[avgIdx] !== '(s/d)') windAverage = Number(values[avgIdx]);
-                if (gustIdx > -1 && values[gustIdx] !== '(s/d)') windGust = Number(values[gustIdx]);
-                if (dirIdx > -1 && values[dirIdx] !== '(s/d)') windBearing = Number(values[dirIdx]);
-                if (tempIdx > -1 && values[tempIdx] !== '(s/d)')
+                if (avgIdx > -1 && values[avgIdx] !== '(s/d)') {
+                  windAverage = Number(values[avgIdx]);
+                }
+                if (gustIdx > -1 && values[gustIdx] !== '(s/d)') {
+                  windGust = Number(values[gustIdx]);
+                }
+                if (dirIdx > -1 && values[dirIdx] !== '(s/d)') {
+                  windBearing = Number(values[dirIdx]);
+                }
+                if (tempIdx > -1 && values[tempIdx] !== '(s/d)') {
                   temperature = Number(values[tempIdx]);
+                }
               }
             }
           }
@@ -412,9 +425,7 @@ export async function checkForErrors() {
       let isTempError = true;
 
       // check last 6h data
-      const data = s.data.filter((x) => {
-        return new Date(x.time) >= new Date(timeNow - 6 * 60 * 60 * 1000);
-      });
+      const data = s.data.filter((x) => new Date(x.time) >= new Date(timeNow - 6 * 60 * 60 * 1000));
 
       if (data.length) {
         data.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()); // time desc

@@ -4,8 +4,6 @@ services:
       context: ./server
     restart: unless-stopped
     env_file: ./.env
-    environment:
-      - DB_CONNECTION_STRING=${MONGO_CONNECTION_STRING}
     depends_on:
       - mongodb
       - seq
@@ -35,6 +33,7 @@ services:
     environment:
       - ACCEPT_EULA=Y
       - SEQ_INGESTION_URL=${SEQ_INGESTION_URL}
+      - SEQ_FIRSTRUN_ADMINPASSWORD=${SEQ_INITIAL_PASSWORD}
     ports:
       - "${SEQ_LOCAL_PORT}:${SEQ_DOCKER_PORT}"
       - "${SEQ_INGESTION_LOCAL_PORT}:${SEQ_INGESTION_DOCKER_PORT}"

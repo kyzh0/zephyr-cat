@@ -19,8 +19,7 @@ import './Webcam.css';
 import { Carousel } from 'react-responsive-carousel';
 import { formatInTimeZone } from 'date-fns-tz';
 
-import { FILESERVERROOT } from '../helpers/constants';
-import { getWebcamTypeName } from '../helpers/utils';
+import { getWebcamTypeName } from '../lib/utils';
 
 export default function Webcam() {
   const { id } = useParams();
@@ -33,9 +32,13 @@ export default function Webcam() {
   async function fetchData() {
     try {
       const cam = await getCamById(id);
-      if (!cam) navigate('/');
+      if (!cam) {
+        navigate('/');
+      }
       setWebcam(cam);
-      if (Date.now() - new Date(cam.currentTime).getTime() >= 24 * 60 * 60 * 1000) return;
+      if (Date.now() - new Date(cam.currentTime).getTime() >= 24 * 60 * 60 * 1000) {
+        return;
+      }
 
       const images = await loadCamImages(id);
       images.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()); // time asc
@@ -48,7 +51,9 @@ export default function Webcam() {
 
   // initial load
   useEffect(() => {
-    if (!id) return;
+    if (!id) {
+      return;
+    }
 
     try {
       setInitialLoad(false);
@@ -60,7 +65,9 @@ export default function Webcam() {
 
   // on refresh trigger (ignore initial load)
   useEffect(() => {
-    if (!id || initialLoad || !refreshedWebcams || !refreshedWebcams.includes(id)) return;
+    if (!id || initialLoad || !refreshedWebcams || !refreshedWebcams.includes(id)) {
+      return;
+    }
 
     try {
       fetchData();
@@ -139,7 +146,10 @@ export default function Webcam() {
                         img.loaded = true;
                         return (
                           <div key={img.time}>
-                            <img width="100%" src={`${FILESERVERROOT}/${img.url}`} />
+                            <img
+                              width="100%"
+                              src={`${process.env.REACT_APP_FILE_SERVER_PREFIX}/${img.url}`}
+                            />
                             <p style={{ margin: 0 }}>
                               {formatInTimeZone(new Date(img.time), 'CET', 'dd MMM HH:mm')}
                             </p>

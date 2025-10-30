@@ -64,7 +64,9 @@ async function getCamFtpImage(lastUpdate) {
 
     updated = new Date(response.headers['last-modified']);
     // skip if image already up to date
-    if (updated > lastUpdate) base64 = Buffer.from(response.data, 'binary').toString('base64');
+    if (updated > lastUpdate) {
+      base64 = Buffer.from(response.data, 'binary').toString('base64');
+    }
   } catch (error) {
     logger.warn('An error occured while fetching images for cameraftp', {
       service: 'cam',
@@ -179,9 +181,9 @@ export async function webcamWrapper() {
             img.fileSize = imgBuff.length;
 
             if (c.images.length) {
-              const latestImg = c.images.reduce((prev, current) => {
-                return prev && new Date(prev.time) > new Date(current.time) ? prev : current;
-              });
+              const latestImg = c.images.reduce((prev, current) =>
+                prev && new Date(prev.time) > new Date(current.time) ? prev : current
+              );
               if (latestImg && latestImg.fileSize == img.fileSize && latestImg.hash == img.hash) {
                 logger.info(
                   `${c.type} image update skipped${c.externalId ? ` - ${c.externalId}` : ''}`,
@@ -256,10 +258,14 @@ export async function removeOldImages() {
     }
 
     dir.files('public/cams', async (err, files) => {
-      if (err) throw err;
+      if (err) {
+        throw err;
+      }
       for (const file of files) {
         const stats = await fs.stat(file);
-        if (stats.birthtimeMs <= cutoff.getTime()) await fs.rm(file);
+        if (stats.birthtimeMs <= cutoff.getTime()) {
+          await fs.rm(file);
+        }
       }
     });
   } catch (error) {

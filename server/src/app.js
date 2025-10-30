@@ -22,11 +22,7 @@ if (process.env.NODE_ENV !== 'production') {
   app.use(express.static('public'));
 }
 
-mongoose.connect(
-  process.env.NODE_ENV === 'production'
-    ? process.env.DB_CONNECTION_STRING
-    : process.env.DEV_CONNECTION_STRING
-);
+mongoose.connect(process.env.DB_CONNECTION_STRING);
 
 // routes
 app.use('/auth', authRoute);

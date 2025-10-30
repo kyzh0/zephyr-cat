@@ -4,7 +4,7 @@ import { useCookies } from 'react-cookie';
 import { formatInTimeZone } from 'date-fns-tz';
 import { getStationById, loadStationData } from '../services/stationService';
 import { AppContext } from '../context/AppContext';
-import { getWindDirectionFromBearing, getWindColor, getStationTypeName } from '../helpers/utils';
+import { getWindDirectionFromBearing, getWindColor, getStationTypeName } from '../lib/utils';
 
 import {
   LineChart,
@@ -76,9 +76,13 @@ export default function Station() {
   async function fetchData() {
     try {
       const s = await getStationById(id);
-      if (!s) navigate('/');
+      if (!s) {
+        navigate('/');
+      }
       setStation(s);
-      if (s.isOffline) return;
+      if (s.isOffline) {
+        return;
+      }
 
       const validBearings = [];
       const pairs = s.validBearings ? s.validBearings.split(',') : [];
@@ -115,7 +119,9 @@ export default function Station() {
 
   // initial load
   useEffect(() => {
-    if (!id) return;
+    if (!id) {
+      return;
+    }
 
     try {
       setInitialLoad(false);
@@ -127,7 +133,9 @@ export default function Station() {
 
   // on refresh trigger (ignore initial load)
   useEffect(() => {
-    if (!id || initialLoad || !refreshedStations || !refreshedStations.includes(id)) return;
+    if (!id || initialLoad || !refreshedStations || !refreshedStations.includes(id)) {
+      return;
+    }
 
     try {
       fetchData();
@@ -137,10 +145,14 @@ export default function Station() {
   }, [id, refreshedStations]);
 
   useEffect(() => {
-    if (!tableRef.current) return;
+    if (!tableRef.current) {
+      return;
+    }
     tableRef.current.querySelector('tbody td:last-child').scrollIntoView();
 
-    if (!modalRef.current) return;
+    if (!modalRef.current) {
+      return;
+    }
     modalRef.current.scroll(0, 0);
   }, [data]);
 
