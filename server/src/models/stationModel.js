@@ -37,19 +37,16 @@ const schema = mongoose.Schema({
   popupMessage: String,
   isError: Boolean,
   isOffline: Boolean,
-  isDisabled: Boolean,
-  data: [
-    {
-      time: {
-        type: Date,
-        required: true
-      },
-      windAverage: Number,
-      windGust: Number,
-      windBearing: Number,
-      temperature: Number
-    }
-  ]
+  isDisabled: Boolean
 });
+
+schema.virtual('data', {
+  ref: 'StationData',
+  localField: '_id',
+  foreignField: 'station'
+});
+
+schema.set('toObject', { virtuals: true });
+schema.set('toJSON', { virtuals: true });
 
 export const Station = mongoose.model('Station', schema);

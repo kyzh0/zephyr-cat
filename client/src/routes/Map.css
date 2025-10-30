@@ -43,9 +43,9 @@
   z-index: 50 !important;
 }
 
-@media screen and (max-width: 400px) {
+@media screen and (max-width: 600px) {
   .history-slider {
-    transform: translate(-25%, 0);
+    bottom: 40px;
   }
 }
 
@@ -55,7 +55,7 @@
   border-radius: 4px;
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
   position: absolute;
-  bottom: 40px;
+  bottom: 60px;
   left: 50%;
   transform: translate(-50%, 0);
   width: 40vw;

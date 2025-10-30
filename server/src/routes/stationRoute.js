@@ -3,6 +3,7 @@ import * as geofire from 'geofire-common';
 
 import { ObjectId } from 'mongodb';
 import { Station } from '../models/stationModel.js';
+import { StationData } from '../models/stationDataModel.js';
 import { User } from '../models/userModel.js';
 
 const router = express.Router();
@@ -35,7 +36,7 @@ router.get('/', async (req, res) => {
     query.lastUpdate = { $gte: new Date(time * 1000) };
   }
 
-  let stations = await Station.find(query, { data: 0 }).sort(orderby);
+  let stations = await Station.find(query).sort(orderby).lean();
 
   if (!isNaN(latitude) && !isNaN(longitude) && !isNaN(rad)) {
     stations = JSON.parse(JSON.stringify(stations)); // convert to plain js obj
@@ -56,7 +57,7 @@ router.get('/', async (req, res) => {
 
 // add station
 router.post('/', async (req, res) => {
-  const user = await User.findOne({ key: req.query.key });
+  const user = await User.findOne({ key: req.query.key }).lean();
   if (!user) {
     res.status(401).send();
     return;
@@ -97,23 +98,43 @@ router.get('/data', async (req, res) => {
   const timeFrom = new Date(timeTo.getTime() - 30 * 60 * 1000);
 
   // select data for 30 min interval ending at specified time
-  const data = await Station.aggregate([
-    {
-      $project: {
-        _id: 1,
-        validBearings: 1,
-        data: {
-          $filter: {
-            input: '$data',
-            as: 'd',
-            cond: {
-              $and: [{ $gte: ['$$d.time', timeFrom] }, { $lte: ['$$d.time', timeTo] }]
-            }
-          }
+  const stations = await Station.find({
+    isDisabled: { $ne: true }
+  })
+    .select('_id validBearings')
+    .lean();
+  const stationMap = new Map(stations.map((s) => [s._id.toString(), s]));
+
+  const stationData = await StationData.find({
+    station: { $in: stations.map((s) => s._id) },
+    time: { $gt: timeFrom, $lte: timeTo }
+  }).lean();
+
+  const data = Array.from(
+    stationData
+      .reduce((acc, d) => {
+        const stationId = d.station.toString();
+
+        if (!acc.has(stationId)) {
+          acc.set(stationId, {
+            _id: stationId,
+            data: []
+          });
         }
-      }
-    }
-  ]);
+
+        acc.get(stationId).data.push({
+          windAverage: d.windAverage,
+          windBearing: d.windBearing
+        });
+
+        return acc;
+      }, new Map())
+      .values()
+  );
+
+  for (const group of data) {
+    group.validBearings = stationMap.get(group._id)?.validBearings || null;
+  }
 
   if (!data.length) {
     res.json({ time: new Date().toISOString(), values: [] });
@@ -157,7 +178,7 @@ router.get('/:id', async (req, res) => {
     return;
   }
 
-  const s = await Station.findOne({ _id: new ObjectId(id) }, { data: 0 });
+  const s = await Station.findOne({ _id: new ObjectId(id) }).lean();
   if (!s) {
     res.status(404).send();
     return;
@@ -169,7 +190,7 @@ router.get('/:id', async (req, res) => {
 // patch station
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
-  const user = await User.findOne({ key: req.query.key });
+  const user = await User.findOne({ key: req.query.key }).lean();
   if (!user) {
     res.status(401).send();
     return;
@@ -177,7 +198,7 @@ router.patch('/:id', async (req, res) => {
 
   const { patch, remove } = req.body;
   try {
-    const station = await Station.findOne({ _id: new ObjectId(id) }, { data: 0 });
+    const station = await Station.findOne({ _id: new ObjectId(id) });
 
     for (const key of Object.keys(patch)) {
       station[key] = patch[key];
@@ -202,31 +223,23 @@ router.get('/:id/data', async (req, res) => {
     return;
   }
 
-  const result = await Station.aggregate([
-    {
-      $match: { _id: new ObjectId(id) }
-    },
-    {
-      $project: {
-        _id: 0,
-        data: {
-          $slice: [
-            {
-              $sortArray: { input: '$data', sortBy: { time: -1 } }
-            },
-            145 // 145 records in last 24h
-          ]
-        }
-      }
-    }
-  ]);
+  const result = await StationData.find({ station: id }).sort({ time: -1 }).limit(145).lean();
 
-  if (!result.length) {
+  if (!result || !result.length) {
     res.json([]);
     return;
   }
 
-  res.json(result[0].data);
+  res.json(
+    result.map((r) => ({
+      time: r.time,
+      windAverage: r.windAverage,
+      windGust: r.windGust,
+      windBearing: r.windBearing,
+      temperature: r.temperature,
+      _id: r.station
+    }))
+  );
 });
 
 export default router;

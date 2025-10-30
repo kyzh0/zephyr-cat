@@ -2,6 +2,20 @@ services:
   server:
     build:
       context: ./server
+    mem_limit: 2g
+    restart: unless-stopped
+    env_file: ./.env
+    depends_on:
+      - mongodb
+      - seq
+    volumes:
+      - caddy_fs:/app/public/
+
+  scheduler:
+    build:
+      context: ./server
+    command: npm run scheduler
+    mem_limit: 4g
     restart: unless-stopped
     env_file: ./.env
     depends_on:
