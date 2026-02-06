@@ -41,7 +41,6 @@ export default function Help() {
     setMessageError(false);
 
     const data = new FormData(e.currentTarget);
-    data.append('source', 'Catalunya');
     const email = data.get('user_email').trim();
     const message = data.get('message').trim();
 
@@ -67,10 +66,14 @@ export default function Help() {
     }
 
     try {
-      await emailjs.sendForm(
+      await emailjs.send(
         process.env.REACT_APP_EMAILJS_SERVICE_ID,
         process.env.REACT_APP_EMAILJS_TEMPLATE_ID,
-        e.target,
+        {
+          user_email: email,
+          message: message,
+          source: 'Catalunya'
+        },
         { publicKey: process.env.REACT_APP_EMAILJS_PUBLIC_KEY }
       );
 
